@@ -1,0 +1,15 @@
+{
+  "name": "transit",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "transit_bg.wasm",
+    "transit.js",
+    "transit.d.ts"
+  ],
+  "main": "transit.js",
+  "types": "transit.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
