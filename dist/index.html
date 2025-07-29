@@ -139,6 +139,7 @@
             const btn = document.getElementById('ab');
             btn.textContent = srch ? '停止' : '搜索';
             btn.disabled = false;
+            btn.style.visibility = srch ? 'hidden' : 'visible';
         }
         function start_s() {
             if (srch) return;
