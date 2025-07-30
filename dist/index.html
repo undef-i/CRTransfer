@@ -13,7 +13,7 @@
     padding: 1rem 0.5rem;
 ">
     <h1>换乘查询</h1>
-    <p><em>仅为辅助参考，未包含非每日开行列车数据，且受铁路运行图调整或其他不可控因素影响，信息准确性无法保证。</em>
+    <p>此工具仅为辅助参考，未包含非每日开行列车数据，且受铁路运行图调整或其他不可控因素影响，信息准确性无法保证。<br><em>数据截至 2025-07-31T18:35:00+08:00 </em>
     </p>
     <div>
         起点：<input type="text" id="o" value="" autocomplete="off"><label><input type="checkbox" id="esc_o"
@@ -25,55 +25,36 @@
         <label>换乘时间：</label>
         <input type="number" id="mtt" value="0"> 分钟
         <br><br>
-        <button id="ab" onclick="act()">搜索</button>
+        <button id="ab">搜索</button>
     </div>
     <div id="st"></div>
     <div id="rs"></div>
-
     <script>
-        let w, pw = null, jcnt = 0, srch = false, d_init = false, all_stations = [], current_input = null;
+        let w = null;
+        let jcnt = 0;
+        let srch = false;
+        let d_init = false;
+        let stns = [];
+        let cur_in = null;
+        const ts = Date.now();
 
         function up_st(msg) { document.getElementById('st').innerHTML = `<p><strong>${msg}</strong></p>`; }
 
         function show_sug(input) {
-            current_input = input;
-            const query = input.value.toLowerCase();
-            if (!query || !all_stations) {
-                hide_sug();
-                return;
-            }
-
-            const matches = all_stations.filter(station =>
-                station.toLowerCase().includes(query)
-            ).slice(0, 8);
-
-            if (matches.length === 0) {
-                hide_sug();
-                return;
-            }
-
-            const suggestions = document.getElementById('suggestions');
-            suggestions.innerHTML = matches.map(station =>
-                `<a href="#" onmousedown="sel_sug('${station}'); return false;">${station}</a>`
-            ).join(' | ');
+            cur_in = input;
+            const q = input.value.toLowerCase();
+            if (!q || !stns) { hide_sug(); return; }
+            const matches = stns.filter(s => s.toLowerCase().includes(q)).slice(0, 8);
+            if (matches.length === 0) { hide_sug(); return; }
+            document.getElementById('suggestions').innerHTML = matches.map(s => `<a href="#" onmousedown="sel_sug('${s}'); return false;">${s}</a>`).join(' | ');
         }
 
-        function hide_sug() {
-            document.getElementById('suggestions').innerHTML = '&nbsp;';
-        }
+        function hide_sug() { document.getElementById('suggestions').innerHTML = '&nbsp;'; }
 
-        function sel_sug(station) {
-            if (current_input) {
-                current_input.value = station;
-                current_input = null;
-            }
+        function sel_sug(s) {
+            if (cur_in) { cur_in.value = s; }
             hide_sug();
-        }
-
-        function load_stn() {
-            if (pw && d_init) {
-                pw.postMessage({ t: 'get_stn' });
-            }
+            cur_in = null;
         }
 
         function disp_j(jny, i) {
@@ -81,10 +62,10 @@
             const xfers = calc_x(jny.p);
             const jdiv = document.createElement('div');
             jdiv.innerHTML = `
-                    <hr><h3>方案 ${i}</h3>
-                    <p><strong>用时：</strong> ${fmt_dur(jny.tdur)} | <strong>换乘：</strong> ${xfers}次</p>
-                    <p>${jny.p[0].r.bs} ${fmt_at(jny.idt)} → ${jny.p[jny.p.length - 1].r.al} ${fmt_at(jny.aat)}</p>
-                    <h4>路径：</h4><ul>${gen_jdet(jny)}</ul>`;
+    <hr><h3>方案 ${i}</h3>
+    <p><strong>用时：</strong> ${fmt_dur(jny.tdur)} | <strong>换乘：</strong> ${xfers}次</p>
+    <p>${jny.p[0].r.bs} ${fmt_at(jny.idt)} → ${jny.p[jny.p.length - 1].r.al} ${fmt_at(jny.aat)}</p>
+    <h4>路径：</h4><ul>${gen_jdet(jny)}</ul>`;
             rdiv.appendChild(jdiv);
         }
 
@@ -135,93 +116,109 @@
         }
 
         function act() { if (srch) stop_s(); else start_s(); }
+
         function up_ab() {
             const btn = document.getElementById('ab');
             btn.textContent = srch ? '停止' : '搜索';
-            btn.disabled = false;
+            btn.disabled = (!d_init && !srch);
         }
+
         function start_s() {
-            if (srch) return;
+            if (srch || !d_init) return;
             const o = document.getElementById('o').value.trim();
             const d = document.getElementById('d').value.trim();
-            const mtt = parseInt(document.getElementById('mtt').value);
-            const esc_o = document.getElementById('esc_o').checked;
-            const esc_d = document.getElementById('esc_d').checked;
             if (!o || !d) { up_st('输入起点和终点'); return; }
-            srch = true; jcnt = 0; up_ab();
-            document.getElementById('rs').innerHTML = ''; up_st('搜索');
-            w = (pw && d_init) ? (pw_temp = pw, pw = null, pw_temp) : new Worker('worker.js');
-            if (!w) { fin_s(); return; }
+
+            srch = true;
+            jcnt = 0;
+            up_ab();
+            document.getElementById('rs').innerHTML = '';
+            up_st('搜索');
+
+            w.postMessage({
+                t: 'start', o, d,
+                mtt: parseInt(document.getElementById('mtt').value),
+                esc_o: document.getElementById('esc_o').checked,
+                esc_d: document.getElementById('esc_d').checked
+            });
+        }
+
+        function stop_s() {
+            if (srch && w) {
+                w.postMessage({ t: 'stop' });
+            }
+        }
+
+        function fin_s() {
+            srch = false;
+            up_ab();
+        }
+
+        function init_wkr() {
+            if (w) return;
+            up_st('加载');
+            up_ab();
+            w = new Worker(`worker.js?v=${ts}`);
+
             w.onmessage = function (e) {
                 const { t, d } = e.data;
-                if (t === 'j_fnd') { jcnt++; disp_j(d, jcnt); up_st(`找到 ${jcnt} 条方案`); }
-                else if (t === 'done') {
-                    if (jcnt === 0) { up_st('无路径'); }
-                    else { up_st(`共 ${jcnt} 条方案`); }
-                    fin_s();
-                } else if (t === 'err') { up_st(d); fin_s(); }
-                else if (t === 'stat') { up_st(d); }
-                else if (t === 'd_init') { d_init = true; }
+                switch (t) {
+                    case 'j_fnd':
+                        jcnt++;
+                        disp_j(d, jcnt);
+                        up_st(`查询到 ${jcnt} 条方案`);
+                        break;
+                    case 'done':
+                        fin_s();
+                        if (jcnt === 0) {
+                            up_st('无方案');
+                        } else {
+                            up_st(`共 ${jcnt} 条方案`);
+                        }
+                        break;
+                    case 'err':
+                        up_st(d);
+                        fin_s();
+                        break;
+                    case 'stat':
+                        up_st(d);
+                        break;
+                    case 'init_done':
+                        d_init = true;
+                        up_st('就绪');
+                        up_ab();
+                        w.postMessage({ t: 'get_stn' });
+                        break;
+                    case 'stn':
+                        stns = d;
+                        break;
+                }
             };
+
             w.onerror = function (err) { up_st(err.message); fin_s(); };
-            w.postMessage({ t: 'start', o, d, mtt, esc_o, esc_d });
-        }
-        function stop_s() {
-            const w_ = w || pw;
-            if (w_) { 
-                w_.terminate(); 
-                w = null;
-                pw = null;
-            }
-            up_st('已停止'); 
-            fin_s();
-        }
-        function fin_s() {
-            srch = false; up_ab();
-            if (w && d_init) { pw = w; w = null; }
-            else if (w) { w.terminate(); w = null; }
-            if (!pw && d_init) { init_ol(); }
-        }
-        function init_ol() {
-            if (d_init || pw) return;
-            pw = new Worker('worker.js');
-            pw.onmessage = function (e) {
-                const { t, d } = e.data;
-                if (t === 'd_init') { d_init = true; load_stn(); up_st('就绪'); }
-                else if (t === 'stn') { all_stations = d; console.log('loaded', d.length, 'stn'); }
-                else if (t === 'err') { up_st('加载失败：' + d); pw.terminate(); pw = null; }
-                else if (t === 'stat') { up_st(d); }
-            };
-            pw.onerror = function (err) { up_st(err.message); pw.terminate(); pw = null; };
-            up_st('数据加载');
-            pw.postMessage({ t: 'init_d_only' });
+            w.postMessage({ t: 'init_only' });
         }
 
         document.getElementById('o').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
         document.getElementById('d').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
+        document.getElementById('o').addEventListener('input', function () { show_sug(this); });
+        document.getElementById('d').addEventListener('input', function () { show_sug(this); });
+        document.getElementById('o').addEventListener('focus', function () { if (this.value) show_sug(this); });
+        document.getElementById('d').addEventListener('focus', function () { if (this.value) show_sug(this); });
+        document.body.addEventListener('click', hide_sug, true);
 
-        // 添加输入框的候选词功能
-        document.getElementById('o').addEventListener('input', function (e) {
-            show_sug(this);
+        window.addEventListener('load', () => {
+            document.getElementById('ab').addEventListener('click', act);
+            up_ab();
+            init_wkr();
         });
-        document.getElementById('d').addEventListener('input', function (e) {
-            show_sug(this);
-        });
-        document.getElementById('o').addEventListener('focus', function (e) {
-            if (this.value) show_sug(this);
-        });
-        document.getElementById('d').addEventListener('focus', function (e) {
-            if (this.value) show_sug(this);
-        });
-        document.getElementById('o').addEventListener('blur', hide_sug);
-        document.getElementById('d').addEventListener('blur', hide_sug);
-        window.addEventListener('load', () => { up_ab(); init_ol(); });
-        up_ab(); up_st('启动');
+        up_st('启动');
     </script>
-        <hr>
-        <p>
-            © 2025 noxylva. Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">AGPLv3</a>
-        </p>
-    </body>
+
+    <hr>
+    <p>
+        © 2025 noxylva. Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">AGPLv3</a>
+    </p>
+</body>
 
 </html>
