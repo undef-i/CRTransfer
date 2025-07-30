@@ -139,7 +139,6 @@
             const btn = document.getElementById('ab');
             btn.textContent = srch ? '停止' : '搜索';
             btn.disabled = false;
-            btn.style.visibility = srch ? 'hidden' : 'visible';
         }
         function start_s() {
             if (srch) return;
@@ -169,8 +168,13 @@
         }
         function stop_s() {
             const w_ = w || pw;
-            if (w_) { w_.postMessage({ t: 'stop' }); }
-            else { up_st('已停止'); fin_s(); }
+            if (w_) { 
+                w_.terminate(); 
+                w = null;
+                pw = null;
+            }
+            up_st('已停止'); 
+            fin_s();
         }
         function fin_s() {
             srch = false; up_ab();
@@ -196,6 +200,7 @@
         document.getElementById('o').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
         document.getElementById('d').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
 
+        // 添加输入框的候选词功能
         document.getElementById('o').addEventListener('input', function (e) {
             show_sug(this);
         });

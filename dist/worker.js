@@ -72,6 +72,7 @@ self.onmessage = async function (e) {
 
     if (t === 'stop') {
         if (wm && in1) wm.stop_s();
+        self.close();
         return;
     }
 
