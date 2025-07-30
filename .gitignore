@@ -1,3 +1,4 @@
 ex
 target
 node_modules
+data/*.py

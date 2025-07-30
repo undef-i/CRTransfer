@@ -1,21 +1,27 @@
 TARGET_DIR = dist
 WASM_DIR = src/wasm
 TEMPLATES_DIR = src/templates
-DATA_DIR = data
+WASM_FILE_NAME = transit_bg.wasm
 
 .PHONY: build clean
 
 build:
-	@echo "Building WASM package..."
-	cd $(WASM_DIR) && ~/.cargo/bin/wasm-pack build --target web
-	@echo "Creating target directory..."
+	@echo "Building WASM package with path remapping..."
+	(cd $(WASM_DIR) && RUSTFLAGS="--remap-path-prefix=$$HOME=~" wasm-pack build --target web --release)
+	
+	@echo "Creating target directory and copying files..."
 	mkdir -p $(TARGET_DIR)
+	
 	@echo "Copying WASM package..."
-	rsync -a --exclude=".*" $(WASM_DIR)/pkg $(TARGET_DIR)/
+	mkdir -p $(TARGET_DIR)/pkg
+	cp -r $(WASM_DIR)/pkg/* $(TARGET_DIR)/pkg/
+	
 	@echo "Copying templates..."
 	cp -r $(TEMPLATES_DIR)/* $(TARGET_DIR)/
-	@echo "Copying data files..."
-	cp -r $(DATA_DIR)/* $(TARGET_DIR)/
+	
+	@echo "Stripping WASM file..."
+	wasm-strip $(TARGET_DIR)/pkg/$(WASM_FILE_NAME)
+	
 	@echo "Build completed successfully!"
 
 clean:

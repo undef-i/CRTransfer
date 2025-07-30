@@ -1,28 +1,29 @@
 /* tslint:disable */
 /* eslint-disable */
+export function init(): void;
 export function stop_s(): void;
-export function init_d(json: string): void;
-export function init_scd(json: string): void;
 export function get_stn(): string[];
-export function find(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): void;
-export function main(): void;
+export function find(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): Promise<void>;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly init: () => [number, number];
   readonly stop_s: () => void;
-  readonly init_d: (a: number, b: number) => [number, number];
-  readonly init_scd: (a: number, b: number) => [number, number];
   readonly get_stn: () => [number, number, number, number];
-  readonly find: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
-  readonly main: () => void;
-  readonly __wbindgen_export_0: WebAssembly.Table;
+  readonly find: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => any;
+  readonly __wbindgen_exn_store: (a: number) => void;
+  readonly __externref_table_alloc: () => number;
+  readonly __wbindgen_export_2: WebAssembly.Table;
+  readonly __wbindgen_export_3: WebAssembly.Table;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __externref_table_dealloc: (a: number) => void;
   readonly __externref_drop_slice: (a: number, b: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+  readonly closure34_externref_shim: (a: number, b: number, c: any) => void;
+  readonly closure56_externref_shim: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_start: () => void;
 }
 
