@@ -13,7 +13,7 @@
     padding: 1rem 0.5rem;
 ">
     <h1>换乘查询</h1>
-    <p>此工具仅为辅助参考，未包含非每日开行列车数据，且受铁路运行图调整或其他不可控因素影响，信息准确性无法保证。<br><em>数据截至 2025-07-31T18:35:00+08:00 </em>
+    <p>此工具仅为辅助参考，未包含非每日开行列车数据，且受铁路运行图调整或其他不可控因素影响，信息准确性无法保证。<br><em>数据截至 2025-08-10T01:13:57+09:00 </em>
     </p>
     <div>
         起点：<input type="text" id="o" value="" autocomplete="off"><label><input type="checkbox" id="esc_o"
@@ -37,6 +37,12 @@
         let stns = [];
         let cur_in = null;
         const ts = Date.now();
+
+        let j_buf = [];
+        let j_idx = 0;
+        const B_SZ = 50;
+        let max_disp = B_SZ;
+        let sc_act = false;
 
         function up_st(msg) { document.getElementById('st').innerHTML = `<p><strong>${msg}</strong></p>`; }
 
@@ -67,6 +73,41 @@
     <p>${jny.p[0].r.bs} ${fmt_at(jny.idt)} → ${jny.p[jny.p.length - 1].r.al} ${fmt_at(jny.aat)}</p>
     <h4>路径：</h4><ul>${gen_jdet(jny)}</ul>`;
             rdiv.appendChild(jdiv);
+        }
+
+        function upd_d() {
+            const end = Math.min(max_disp, j_buf.length);
+            for (let i = j_idx; i < end; i++) {
+                disp_j(j_buf[i], i + 1);
+            }
+            j_idx = end;
+        }
+
+        function is_ab() {
+            return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100;
+        }
+
+        function on_scr() {
+            if (is_ab()) {
+                if (j_idx >= max_disp) {
+                    max_disp += B_SZ;
+                    upd_d();
+                }
+            }
+        }
+        
+        function add_sl() {
+            if (!sc_act) {
+                window.addEventListener('scroll', on_scr);
+                sc_act = true;
+            }
+        }
+
+        function rm_sl() {
+            if (sc_act) {
+                window.removeEventListener('scroll', on_scr);
+                sc_act = false;
+            }
         }
 
         function fmt_dur(m) {
@@ -129,11 +170,18 @@
             const d = document.getElementById('d').value.trim();
             if (!o || !d) { up_st('输入起点和终点'); return; }
 
-            srch = true;
+            rm_sl();
+            j_buf = [];
+            j_idx = 0;
             jcnt = 0;
+            max_disp = B_SZ;
+
+            srch = true;
             up_ab();
             document.getElementById('rs').innerHTML = '';
             up_st('搜索');
+            
+            add_sl();
 
             w.postMessage({
                 t: 'start', o, d,
@@ -147,6 +195,7 @@
             if (srch && w) {
                 w.postMessage({ t: 'stop' });
             }
+            fin_s();
         }
 
         function fin_s() {
@@ -165,8 +214,9 @@
                 switch (t) {
                     case 'j_fnd':
                         jcnt++;
-                        disp_j(d, jcnt);
+                        j_buf.push(d);
                         up_st(`查询到 ${jcnt} 条方案`);
+                        upd_d();
                         break;
                     case 'done':
                         fin_s();
@@ -175,6 +225,7 @@
                         } else {
                             up_st(`共 ${jcnt} 条方案`);
                         }
+                        upd_d();
                         break;
                     case 'err':
                         up_st(d);
