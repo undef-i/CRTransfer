@@ -56,7 +56,6 @@ struct PData {
     scd: HashMap<usize, Vec<usize>>,
     s2i: HashMap<String, usize>,
     i2s: Vec<String>,
-    // 新增站点位置数据
     locations: HashMap<String, SL>,
 }
 
@@ -119,7 +118,6 @@ fn main() {
         }
     }
 
-    // 读取站点位置数据
     let sl_str = fs::read_to_string("../../data/sl.json").expect("Failed to read sl.json");
     let locations: HashMap<String, SL> = serde_json::from_str(&sl_str).expect("Failed to parse sl.json");
 

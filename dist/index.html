@@ -55,7 +55,6 @@
         let max_disp = B_SZ;
         let sc_act = false;
 
-        // 【修复】引入状态锁，防止多个更新任务同时运行
         let isDisplaying = false;
 
         function up_st(msg) { document.getElementById('st').innerHTML = `<p><strong>${msg}</strong></p>`; }
@@ -85,7 +84,6 @@
             const routeStations = jny.allStations || [];
             const jdiv = document.createElement('div');
             
-            // 检查是否需要显示途径站点
             let stationsInfo = '';
             let mapContainer = '';
             if (document.getElementById('show_stations').checked) {
@@ -102,29 +100,25 @@
     ${mapContainer}`;
             rdiv.appendChild(jdiv);
             
-            // 初始化地图
             if (document.getElementById('show_stations').checked && trainStops && trainStops.length > 0) {
-                initMap(i, trainStops);
+                init_m(i, trainStops);
             }
         }
 
-        // 【修复】重写 upd_d 函数，使用锁和 while 循环来安全地处理缓冲区
         async function upd_d() {
-            if (isDisplaying) return; // 如果正在显示，则直接返回
-            isDisplaying = true;      // 上锁
+            if (isDisplaying) return;
+            isDisplaying = true;
 
             try {
-                // 只要缓冲区里还有未显示的项，就继续处理
                 while (j_idx < j_buf.length) {
-                    // 如果达到了当前批次的显示上限（用于无限滚动），则暂停
                     if (j_idx >= max_disp) {
                         break;
                     }
                     await disp_j(j_buf[j_idx], j_idx + 1);
-                    j_idx++; // 成功显示一个后，再移动指针
+                    j_idx++;
                 }
             } finally {
-                isDisplaying = false; // 任务完成或发生错误后，一定要解锁
+                isDisplaying = false;
             }
         }
 
@@ -132,14 +126,11 @@
             return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100;
         }
 
-        // 【修复】优化 on_scr 逻辑以配合新的 upd_d
         function on_scr() {
-            // 如果用户滚动到底部，并且还有更多已加载但未显示的条目
             if (is_ab() && j_idx < j_buf.length) {
-                // 如果显示暂停是因为达到了 max_disp 的限制
                 if (j_idx >= max_disp) {
-                    max_disp += B_SZ; // 增加显示上限
-                    upd_d();          // 再次调用 upd_d 来显示新解锁的条目
+                    max_disp += B_SZ;
+                    upd_d();
                 }
             }
         }
@@ -201,7 +192,6 @@
                 }
                 const fats = fmt_at(fat).slice(-5);
                 
-                // 检查是否需要显示途径站点
                 if (document.getElementById('show_stations').checked) {
                     try {
                         const stops = await gts(r.tn, ss, fs);
@@ -214,7 +204,6 @@
                         }
                         allStations.push(...uniqueStations);
                         
-                        // 为地图显示收集详细的站点信息
                         trainStops.push(...stops);
                         
                         h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
@@ -222,7 +211,6 @@
                         h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
                     }
                 } else {
-                    // 如果不显示途径站点，直接添加列车信息
                     h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
                 }
                 
@@ -313,7 +301,6 @@
             up_ab();
             w = new Worker(`worker.js?v=${ts}`);
 
-            // 【修复】重写 onmessage 处理器以使用锁
             w.onmessage = function (e) {
                 const { t, d } = e.data;
                 switch (t) {
@@ -321,7 +308,6 @@
                         jcnt++;
                         j_buf.push(d);
                         up_st(`查询到 ${jcnt} 条方案`);
-                        // 只在当前没有显示任务时启动，防止重入
                         if (!isDisplaying) {
                             upd_d();
                         }
@@ -382,37 +368,41 @@
         });
         up_st('启动');
         
-        // 初始化地图显示途径站点
-        function initMap(mapId, stops) {
-            // 创建地图实例
+        function init_m(mapId, stops) {
             const map = L.map(`map-${mapId}`).setView([35.8617, 104.1954], 4);
             
-            // 添加OpenStreetMap瓦片图层
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 maxZoom: 19
             }).addTo(map);
             
-            // 添加站点标记
             if (stops && stops.length > 0) {
                 const markers = [];
                 const latlngs = [];
                 
                 stops.forEach(stop => {
-                    // 添加标记点坐标到数组
+
                     latlngs.push([stop.lat, stop.lon]);
                     
-                    // 创建标记并添加点击事件
-                    const marker = L.marker([stop.lat, stop.lon]).addTo(map);
-                    marker.bindPopup(stop.n); // 绑定站名到弹出窗口
-                    markers.push(marker);
+                    const circleMarker = L.circleMarker([stop.lat, stop.lon], {
+                        radius: 3,         
+                        fillColor: "#000000",
+                        color: "#000000",
+                        weight: 1,    
+                        opacity: 1,        
+                        fillOpacity: 1   
+                    }).addTo(map);
+                    
+                    circleMarker.bindPopup(stop.n);
+                    markers.push(circleMarker);
                 });
                 
-                // 将标记连成线
-                const polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+                const railwayLine = L.polyline(latlngs, {
+                    color: '#000000',
+                    weight: 4,
+                }).addTo(map);
                 
-                // 调整地图视图以适应所有标记和线路
-                const group = new L.featureGroup([...markers, polyline]);
+                const group = new L.featureGroup([...markers, railwayLine]);
                 map.fitBounds(group.getBounds(), { padding: [50, 50] });
             }
         }
