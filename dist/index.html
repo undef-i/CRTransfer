@@ -5,6 +5,15 @@
     <meta charset="utf-8">
     <title>换乘查询</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        .map-container {
+            width: 100%;
+            height: 300px;
+            margin: 10px 0;
+        }
+    </style>
 </head>
 
 <body style="
@@ -24,6 +33,8 @@
         <div id="suggestions" style="height:20px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;">&nbsp;</div>
         <label>换乘时间：</label>
         <input type="number" id="mtt" value="0"> 分钟
+        <br>
+        <label><input type="checkbox" id="show_stations"> 显示途径站点</label>
         <br><br>
         <button id="ab">搜索</button>
     </div>
@@ -44,6 +55,9 @@
         let max_disp = B_SZ;
         let sc_act = false;
 
+        // 【修复】引入状态锁，防止多个更新任务同时运行
+        let isDisplaying = false;
+
         function up_st(msg) { document.getElementById('st').innerHTML = `<p><strong>${msg}</strong></p>`; }
 
         function show_sug(input) {
@@ -63,42 +77,76 @@
             cur_in = null;
         }
 
-        function disp_j(jny, i) {
+
+        async function disp_j(jny, i) {
             const rdiv = document.getElementById('rs');
             const xfers = calc_x(jny.p);
+            const { pathDetails, trainStops } = await gen_jdet(jny);
+            const routeStations = jny.allStations || [];
             const jdiv = document.createElement('div');
+            
+            // 检查是否需要显示途径站点
+            let stationsInfo = '';
+            let mapContainer = '';
+            if (document.getElementById('show_stations').checked) {
+                stationsInfo = `<p><strong>途径站点：</strong> ${routeStations.join(' → ')}</p>`;
+                mapContainer = `<div id="map-${i}" class="map-container"></div>`;
+            }
+            
             jdiv.innerHTML = `
     <hr><h3>方案 ${i}</h3>
     <p><strong>用时：</strong> ${fmt_dur(jny.tdur)} | <strong>换乘：</strong> ${xfers}次</p>
     <p>${jny.p[0].r.bs} ${fmt_at(jny.idt)} → ${jny.p[jny.p.length - 1].r.al} ${fmt_at(jny.aat)}</p>
-    <h4>路径：</h4><ul>${gen_jdet(jny)}</ul>`;
+    ${stationsInfo}
+    <h4>路径：</h4><ul>${pathDetails}</ul>
+    ${mapContainer}`;
             rdiv.appendChild(jdiv);
+            
+            // 初始化地图
+            if (document.getElementById('show_stations').checked && trainStops && trainStops.length > 0) {
+                initMap(i, trainStops);
+            }
         }
 
-        function upd_d() {
-            const end = Math.min(max_disp, j_buf.length);
-            for (let i = j_idx; i < end; i++) {
-                disp_j(j_buf[i], i + 1);
+        // 【修复】重写 upd_d 函数，使用锁和 while 循环来安全地处理缓冲区
+        async function upd_d() {
+            if (isDisplaying) return; // 如果正在显示，则直接返回
+            isDisplaying = true;      // 上锁
+
+            try {
+                // 只要缓冲区里还有未显示的项，就继续处理
+                while (j_idx < j_buf.length) {
+                    // 如果达到了当前批次的显示上限（用于无限滚动），则暂停
+                    if (j_idx >= max_disp) {
+                        break;
+                    }
+                    await disp_j(j_buf[j_idx], j_idx + 1);
+                    j_idx++; // 成功显示一个后，再移动指针
+                }
+            } finally {
+                isDisplaying = false; // 任务完成或发生错误后，一定要解锁
             }
-            j_idx = end;
         }
 
         function is_ab() {
             return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100;
         }
 
+        // 【修复】优化 on_scr 逻辑以配合新的 upd_d
         function on_scr() {
-            if (is_ab()) {
+            // 如果用户滚动到底部，并且还有更多已加载但未显示的条目
+            if (is_ab() && j_idx < j_buf.length) {
+                // 如果显示暂停是因为达到了 max_disp 的限制
                 if (j_idx >= max_disp) {
-                    max_disp += B_SZ;
-                    upd_d();
+                    max_disp += B_SZ; // 增加显示上限
+                    upd_d();          // 再次调用 upd_d 来显示新解锁的条目
                 }
             }
         }
         
         function add_sl() {
             if (!sc_act) {
-                window.addEventListener('scroll', on_scr);
+                window.addEventListener('scroll', on_scr, { passive: true });
                 sc_act = true;
             }
         }
@@ -131,8 +179,10 @@
             return x;
         }
 
-        function gen_jdet(jny) {
+        async function gen_jdet(jny) {
             let h = '', ct = jny.idt;
+            const allStations = [];
+            const trainStops = [];
             for (let i = 0; i < jny.p.length; i++) {
                 const ps = jny.p[i], r = ps.r;
                 if (ps.wtb > 0 && i > 0 && r.tn !== jny.p[i - 1].r.tn) {
@@ -150,10 +200,36 @@
                     j++;
                 }
                 const fats = fmt_at(fat).slice(-5);
-                h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                
+                // 检查是否需要显示途径站点
+                if (document.getElementById('show_stations').checked) {
+                    try {
+                        const stops = await gts(r.tn, ss, fs);
+                        const stationNames = stops.map(stop => stop.n);
+                        const uniqueStations = [];
+                        for (const station of stationNames) {
+                            if (!uniqueStations.includes(station)) {
+                                uniqueStations.push(station);
+                            }
+                        }
+                        allStations.push(...uniqueStations);
+                        
+                        // 为地图显示收集详细的站点信息
+                        trainStops.push(...stops);
+                        
+                        h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                    } catch (error) {
+                        h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                    }
+                } else {
+                    // 如果不显示途径站点，直接添加列车信息
+                    h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                }
+                
                 if (j > i + 1) { ct = fat; i = j - 1; }
             }
-            return h;
+            jny.allStations = [...new Set(allStations)];
+            return { pathDetails: h, trainStops };
         }
 
         function act() { if (srch) stop_s(); else start_s(); }
@@ -175,6 +251,7 @@
             j_idx = 0;
             jcnt = 0;
             max_disp = B_SZ;
+            isDisplaying = false; 
 
             srch = true;
             up_ab();
@@ -198,6 +275,33 @@
             fin_s();
         }
 
+        const gtsPromises = new Map();
+        
+        function gts(n,f,t) {
+            if (w) {
+                const requestId = Date.now() + Math.random();
+                const promise = new Promise((resolve, reject) => {
+                    gtsPromises.set(requestId, { resolve, reject });
+                    setTimeout(() => {
+                        if (gtsPromises.has(requestId)) {
+                            gtsPromises.delete(requestId);
+                            reject(new Error('gts request timeout'));
+                        }
+                    }, 10000);
+                });
+                
+                w.postMessage({
+                    t: 'gts',
+                    requestId: requestId,
+                    d: { n: n, f: f, t: t }
+                });
+                
+                return promise;
+            }
+            
+            return Promise.reject(new Error('Worker not initialized'));
+        }
+
         function fin_s() {
             srch = false;
             up_ab();
@@ -209,6 +313,7 @@
             up_ab();
             w = new Worker(`worker.js?v=${ts}`);
 
+            // 【修复】重写 onmessage 处理器以使用锁
             w.onmessage = function (e) {
                 const { t, d } = e.data;
                 switch (t) {
@@ -216,16 +321,21 @@
                         jcnt++;
                         j_buf.push(d);
                         up_st(`查询到 ${jcnt} 条方案`);
-                        upd_d();
+                        // 只在当前没有显示任务时启动，防止重入
+                        if (!isDisplaying) {
+                            upd_d();
+                        }
                         break;
                     case 'done':
                         fin_s();
                         if (jcnt === 0) {
                             up_st('无方案');
                         } else {
+                            if (!isDisplaying) {
+                                upd_d();
+                            }
                             up_st(`共 ${jcnt} 条方案`);
                         }
-                        upd_d();
                         break;
                     case 'err':
                         up_st(d);
@@ -242,6 +352,13 @@
                         break;
                     case 'stn':
                         stns = d;
+                        break;
+                    case 'ts':
+                        if (e.data.requestId && gtsPromises.has(e.data.requestId)) {
+                            const { resolve } = gtsPromises.get(e.data.requestId);
+                            gtsPromises.delete(e.data.requestId);
+                            resolve(d);
+                        }
                         break;
                 }
             };
@@ -264,6 +381,41 @@
             init_wkr();
         });
         up_st('启动');
+        
+        // 初始化地图显示途径站点
+        function initMap(mapId, stops) {
+            // 创建地图实例
+            const map = L.map(`map-${mapId}`).setView([35.8617, 104.1954], 4);
+            
+            // 添加OpenStreetMap瓦片图层
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // 添加站点标记
+            if (stops && stops.length > 0) {
+                const markers = [];
+                const latlngs = [];
+                
+                stops.forEach(stop => {
+                    // 添加标记点坐标到数组
+                    latlngs.push([stop.lat, stop.lon]);
+                    
+                    // 创建标记并添加点击事件
+                    const marker = L.marker([stop.lat, stop.lon]).addTo(map);
+                    marker.bindPopup(stop.n); // 绑定站名到弹出窗口
+                    markers.push(marker);
+                });
+                
+                // 将标记连成线
+                const polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+                
+                // 调整地图视图以适应所有标记和线路
+                const group = new L.featureGroup([...markers, polyline]);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
     </script>
 
     <hr>

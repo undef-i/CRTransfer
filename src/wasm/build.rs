@@ -36,6 +36,12 @@ struct RawScdat {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+struct SL {
+    lat: Option<f64>,
+    lon: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct R {
     tn: String,
     bs: usize,
@@ -50,12 +56,15 @@ struct PData {
     scd: HashMap<usize, Vec<usize>>,
     s2i: HashMap<String, usize>,
     i2s: Vec<String>,
+    // 新增站点位置数据
+    locations: HashMap<String, SL>,
 }
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=../../data/rdat.json");
     println!("cargo:rerun-if-changed=../../data/scdat.json");
+    println!("cargo:rerun-if-changed=../../data/sl.json");
 
     let mut s2i: HashMap<String, usize> = HashMap::new();
     let mut i2s: Vec<String> = Vec::new();
@@ -110,7 +119,11 @@ fn main() {
         }
     }
 
-    let p_data = PData { dat, scd, s2i, i2s };
+    // 读取站点位置数据
+    let sl_str = fs::read_to_string("../../data/sl.json").expect("Failed to read sl.json");
+    let locations: HashMap<String, SL> = serde_json::from_str(&sl_str).expect("Failed to parse sl.json");
+
+    let p_data = PData { dat, scd, s2i, i2s, locations };
     let encoded: Vec<u8> = bincode::serialize(&p_data).expect("Failed to serialize data");
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());

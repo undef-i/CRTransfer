@@ -1,8 +1,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export function init(): void;
-export function stop_s(): void;
-export function get_stn(): string[];
+export function stop(): void;
+export function g_stns(): string[];
+export function gts(tn: string, from: string, to: string): any;
 export function find(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): Promise<void>;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -10,8 +11,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly init: () => [number, number];
-  readonly stop_s: () => void;
-  readonly get_stn: () => [number, number, number, number];
+  readonly stop: () => void;
+  readonly g_stns: () => [number, number, number, number];
+  readonly gts: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
   readonly find: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => any;
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
@@ -22,8 +24,8 @@ export interface InitOutput {
   readonly __externref_table_dealloc: (a: number) => void;
   readonly __externref_drop_slice: (a: number, b: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly closure34_externref_shim: (a: number, b: number, c: any) => void;
-  readonly closure56_externref_shim: (a: number, b: number, c: any, d: any) => void;
+  readonly closure46_externref_shim: (a: number, b: number, c: any) => void;
+  readonly closure68_externref_shim: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_start: () => void;
 }
 

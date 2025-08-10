@@ -34,7 +34,7 @@ self.onmessage = async function (e) {
 
     try {
         if (t === 'stop') {
-            if (wm) wm.stop_s();
+            if (wm) wm.stop();
             return;
         }
 
@@ -49,8 +49,17 @@ self.onmessage = async function (e) {
         } else if (t === 'init_only') {
             self.postMessage({ t: 'init_done' });
         } else if (t === 'get_stn') {
-            const stns = wm.get_stn();
+            const stns = wm.g_stns();
             self.postMessage({ t: 'stn', d: stns });
+        } else if (t === 'gts') {
+            try {
+                const stopsJson = wm.gts(d.n, d.f, d.t);
+                const stops = JSON.parse(stopsJson);
+                self.postMessage({ t: 'ts', d: stops, requestId: e.data.requestId });
+            } catch (err) {
+                console.error('gts err:', err);
+                self.postMessage({ t: 'err', d: err.toString() || 'gts unk err', requestId: e.data.requestId });
+            }
         }
     } catch (err) {
         console.error('err in worker:', err);
