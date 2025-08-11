@@ -9,22 +9,49 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="pangu.js"></script>
     <style>
         .map-container {
             width: 100%;
             height: 300px;
             margin: 10px 0;
         }
+
+        body {
+            max-width: 650px;
+            margin: 40px auto;
+            padding: 0 10px;
+            font: 18px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            color: #444
+        }
+
+        h1,
+        h2,
+        h3 {
+            line-height: 1.2
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                color: #c9d1d9;
+                background: #0d1117
+            }
+
+            a:link {
+                color: #58a6ff
+            }
+
+            a:visited {
+                color: #8e96f0
+            }
+        }
     </style>
 </head>
 
-<body style="
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 1rem 0.5rem;
-">
+<body>
     <h1>换乘查询</h1>
-    <p>信息仅为辅助参考。鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。<span style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。数据截至2025年8月16日。
+    <p>鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。途径站点位置信息有部分错漏，仅供辅助参考。<span
+            style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。<br>数据更新于2025年8月11日。
     </p>
     <div>
         起点：<input type="text" id="o" value="" autocomplete="off"><label><input type="checkbox" id="esc_o"
@@ -32,10 +59,15 @@
         终点：<input type="text" id="d" value="" autocomplete="off"><label><input type="checkbox" id="esc_d"
                 checked>同城站</label>
         <br>
-        <div id="suggestions" style="height:20px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;">&nbsp;</div>
-        <label>换乘时间：</label>
-        <input type="number" id="mtt" value="0"> 分钟
+        <div id="suggestions">&nbsp;</div>
+        <label><input type="radio" name="mode" value="time" checked> 最短时间</label>
+        <label><input type="radio" name="mode" value="xfer"> 最少换乘</label>
         <br>
+        <span id="mtt_container">
+            <label>换乘时间：</label>
+            <input type="number" id="mtt" value="0"> 分钟
+            <br>
+        </span>
         <label><input type="checkbox" id="show_stations"> 显示途径站点</label>
         <br><br>
         <button id="ab">搜索</button>
@@ -61,7 +93,10 @@
         let disp = false;
         const gtsp = new Map();
 
-        function us(m) { document.getElementById('st').innerHTML = `<p><strong>${m}</strong></p>`; }
+        function us(m) {
+            const message = pangu.spacing(m);
+            document.getElementById('st').innerHTML = `<p><strong>${message}</strong></p>`;
+        }
 
         function ss(inp) {
             cin = inp;
@@ -105,13 +140,13 @@
                 mc = `<div id="map-${i}" class="map-container"></div>`;
             }
 
-            jdiv.innerHTML = `
+            jdiv.innerHTML = pangu.spacing(`
     <hr><h3>方案 ${i}</h3>
     <p><strong>用时：</strong> ${fdur(j.tdur)} | <strong>换乘：</strong> ${xfrs}次</p>
     <p>${j.p[0].r.bs} ${fat(j.idt)} → ${j.p[j.p.length - 1].r.al} ${fat(j.aat)}</p>
     ${si}
     <h4>路径：</h4><ul>${pd}</ul>
-    ${mc}`;
+    ${mc}`);
             rd.appendChild(jdiv);
 
             if (document.getElementById('show_stations').checked && tstps && tstps.length > 0) {
@@ -227,7 +262,7 @@
                 if (k > i + 1) { ct = fat_v; i = k - 1; }
             }
             j.allStations = [...new Set(all_sns)];
-            return { pd: h, tstps };
+            return { pd: pangu.spacing(h), tstps };
         }
 
         function act() { if (run) stp_s(); else s_s(); }
@@ -257,8 +292,12 @@
             us('搜索');
             asl();
 
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+
             w.postMessage({
-                t: 'start', o: o_val, d: d_val,
+                t: mode === 'xfer' ? 'start_mx' : 'start',
+                o: o_val,
+                d: d_val,
                 mtt: parseInt(document.getElementById('mtt').value),
                 esc_o: document.getElementById('esc_o').checked,
                 esc_d: document.getElementById('esc_d').checked
@@ -346,6 +385,16 @@
             w.onerror = function (err) { us(err.message); f_s(); };
             w.postMessage({ t: 'init_only' });
         }
+        
+        function tmv() {
+            const sm = document.querySelector('input[name="mode"]:checked').value;
+            const mttc = document.getElementById('mtt_container');
+            if (sm === 'xfer') {
+                mttc.style.display = 'none'; 
+            } else {
+                mttc.style.display = 'inline';
+            }
+        }
 
         document.getElementById('o').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
         document.getElementById('d').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
@@ -360,6 +409,13 @@
             uab();
             await lnd();
             iw();
+            
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', tmv);
+            });
+            tmv();
+
+            pangu.autoSpacingPage();
         });
         us('启动');
 

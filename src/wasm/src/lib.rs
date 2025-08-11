@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use std::collections::{HashMap, BinaryHeap, HashSet};
+use std::collections::{HashMap, BinaryHeap, HashSet, VecDeque};
 use std::cmp::Ordering;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -292,5 +292,117 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
             }
         }
     }
+    Ok(())
+}
+#[derive(Debug, Clone)]
+struct StMx {
+    tdur: i32,
+    aat: i32,
+    sid: usize,
+    idt: i32,
+    x: i32,
+    p: Option<Rc<StMx>>,
+    r: Option<R>,
+}
+
+fn mk_path_mx(st: &StMx) -> Vec<PS> {
+    let mut segs = Vec::new();
+    let mut cur = Some(Rc::new(st.clone()));
+    while let Some(c) = cur {
+        if let Some(ref r) = c.r {
+            let wtb = if let Some(ref p) = c.p { (c.aat - r.dur) - p.aat } else { 0 };
+            segs.push(PS { wtb, r: r.clone() });
+        }
+        cur = c.p.clone();
+    }
+    segs.reverse();
+    segs
+}
+#[wasm_bindgen(js_name = find_mx)]
+pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
+    rst_stop();
+    let rfs = DAT.with(|dat| dat.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("dat not initd"))?;
+    let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
+    let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
+
+    let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
+    let dset: HashSet<usize> = if esc_d { g_sgrp(did).into_iter().collect() } else { [did].into_iter().collect() };
+
+    let mut q = VecDeque::with_capacity(50000);
+    let mut visited: HashMap<(usize, String), i32> = HashMap::with_capacity(10000);
+    
+    for &osid in &osids {
+        if let Some(rs) = rfs.get(&osid) {
+            for r in rs {
+                if let Some(aat) = r.dtr.checked_add(r.dur) {
+                    q.push_back(StMx { tdur: r.dur, aat, sid: r.al, idt: r.dtr, x: 0, p: None, r: Some(r.clone()) });
+                }
+            }
+        }
+    }
+
+    let mut min_found_x = i32::MAX;
+
+    let mut i = 0;
+    while let Some(c) = q.pop_front() {
+        i += 1;
+        if i % 10000 == 0 { sleep(0).await?; }
+        if is_stopped() { break; }
+
+        if c.x > min_found_x {
+            continue;
+        }
+
+        if let Some(r) = &c.r {
+            if let Some(&prev_x) = visited.get(&(c.sid, r.tn.clone())) {
+                if prev_x <= c.x {
+                    continue;
+                }
+            }
+            visited.insert((c.sid, r.tn.clone()), c.x);
+        }
+
+        if dset.contains(&c.sid) {
+            min_found_x = c.x;
+            let p = mk_path_mx(&c);
+            let jny = Jny { tdur: c.tdur, aat: c.aat, idt: c.idt, x: c.x, p };
+            if let Ok(j) = serde_json::to_string(&jny) { on_jny(&j); }
+            continue;
+        }
+
+        if let Some(next_rs) = rfs.get(&c.sid) {
+            for next_r in next_rs {
+                if is_stopped() { break; }
+                let is_cont = if let Some(ref prev_r) = c.r { prev_r.tn == next_r.tn } else { false };
+                let new_x = if is_cont { c.x } else { c.x + 1 };
+
+                if new_x > min_found_x {
+                    continue;
+                }
+                
+                let mut wait = cwait(c.aat % 1440, next_r.dtr % 1440);
+                if !is_cont {
+                    while wait < mtt { wait = wait.saturating_add(1440); }
+                }
+                if wait == i32::MAX { continue; };
+
+                let next_aat = match c.aat.checked_add(wait).and_then(|val| val.checked_add(next_r.dur)) { Some(val) => val, None => continue };
+                let new_tdur = match next_aat.checked_sub(c.idt) { Some(val) => val, None => continue };
+                
+                let new_state = StMx {
+                    tdur: new_tdur, aat: next_aat, sid: next_r.al,
+                    idt: c.idt, x: new_x, p: Some(Rc::new(c.clone())),
+                    r: Some(next_r.clone())
+                };
+
+                if is_cont {
+                    q.push_front(new_state);
+                } else {
+                    q.push_back(new_state);
+                }
+            }
+        }
+    }
+    
     Ok(())
 }

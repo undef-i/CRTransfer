@@ -5,7 +5,7 @@ async function init_w() {
     if (init_done) return true;
     try {
         if (!wm) {
-            const wimp = await import('./pkg/transit.js');
+            const wimp = await import('./pkg/transit.js'); 
             await wimp.default();
             wm = wimp;
             console.log('w module loaded');
@@ -30,7 +30,7 @@ self.on_jny = function (jstr) {
 };
 
 self.onmessage = async function (e) {
-    const { t, o, d, mtt, esc_o, esc_d } = e.data;
+    const { t, o, d, mtt, esc_o, esc_d, requestId } = e.data;
 
     try {
         if (t === 'stop') {
@@ -44,9 +44,15 @@ self.onmessage = async function (e) {
 
         if (t === 'start') {
             self.postMessage({ t: 'stat', d: '...' });
-            await wm.find(o, d, mtt, esc_o, esc_d); 
+            await wm.find(o, d, mtt, esc_o, esc_d);
             self.postMessage({ t: 'done' });
-        } else if (t === 'init_only') {
+        } 
+        else if (t === 'start_mx') { 
+            self.postMessage({ t: 'stat', d: '...' });
+            await wm.find_mx(o, d, mtt, esc_o, esc_d);
+            self.postMessage({ t: 'done' });
+        } 
+        else if (t === 'init_only') {
             self.postMessage({ t: 'init_done' });
         } else if (t === 'get_stn') {
             const stns = wm.g_stns();
@@ -55,10 +61,10 @@ self.onmessage = async function (e) {
             try {
                 const stopsJson = wm.gts(d.n, d.f, d.t);
                 const stops = JSON.parse(stopsJson);
-                self.postMessage({ t: 'ts', d: stops, requestId: e.data.requestId });
+                self.postMessage({ t: 'ts', d: stops, requestId: requestId });
             } catch (err) {
                 console.error('gts err:', err);
-                self.postMessage({ t: 'err', d: err.toString() || 'gts unk err', requestId: e.data.requestId });
+                self.postMessage({ t: 'err', d: err.toString() || 'gts unk err', requestId: requestId });
             }
         }
     } catch (err) {
