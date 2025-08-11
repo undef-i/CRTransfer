@@ -24,7 +24,7 @@
     padding: 1rem 0.5rem;
 ">
     <h1>换乘查询</h1>
-    <p>此工具仅为辅助参考，未包含非每日开行列车数据，且受铁路运行图调整或其他不可控因素影响，信息准确性无法保证。<br><em>数据截至 2025-08-10T01:13:57+09:00 </em>
+    <p>信息仅为辅助参考。鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。<span style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。数据截至2025年8月16日。
     </p>
     <div>
         起点：<input type="text" id="o" value="" autocomplete="off"><label><input type="checkbox" id="esc_o"
@@ -44,114 +44,123 @@
     <div id="rs"></div>
     <script>
         let w = null;
-        let jcnt = 0;
-        let srch = false;
-        let d_init = false;
-        let stns = [];
-        let cur_in = null;
+        let jc = 0;
+        let run = false;
+        let rdy = false;
+        let sns = [];
+        let cin = null;
+        let nd = [];
         const ts = Date.now();
 
-        let j_buf = [];
-        let j_idx = 0;
-        const B_SZ = 50;
-        let max_disp = B_SZ;
-        let sc_act = false;
+        let jbuf = [];
+        let jix = 0;
+        const BSZ = 50;
+        let mdisp = BSZ;
+        let sact = false;
 
-        let isDisplaying = false;
+        let disp = false;
+        const gtsp = new Map();
 
-        function up_st(msg) { document.getElementById('st').innerHTML = `<p><strong>${msg}</strong></p>`; }
+        function us(m) { document.getElementById('st').innerHTML = `<p><strong>${m}</strong></p>`; }
 
-        function show_sug(input) {
-            cur_in = input;
-            const q = input.value.toLowerCase();
-            if (!q || !stns) { hide_sug(); return; }
-            const matches = stns.filter(s => s.toLowerCase().includes(q)).slice(0, 8);
-            if (matches.length === 0) { hide_sug(); return; }
-            document.getElementById('suggestions').innerHTML = matches.map(s => `<a href="#" onmousedown="sel_sug('${s}'); return false;">${s}</a>`).join(' | ');
+        function ss(inp) {
+            cin = inp;
+            const q = inp.value.toLowerCase();
+            if (!q || !sns) { hs(); return; }
+            const ms = sns.filter(s => s.toLowerCase().includes(q)).slice(0, 8);
+            if (ms.length === 0) { hs(); return; }
+            document.getElementById('suggestions').innerHTML = ms.map(s => `<a href="#" onmousedown="sels('${s}'); return false;">${s}</a>`).join(' | ');
         }
 
-        function hide_sug() { document.getElementById('suggestions').innerHTML = '&nbsp;'; }
+        function hs() { document.getElementById('suggestions').innerHTML = '&nbsp;'; }
 
-        function sel_sug(s) {
-            if (cur_in) { cur_in.value = s; }
-            hide_sug();
-            cur_in = null;
+        function sels(s) {
+            if (cin) { cin.value = s; }
+            hs();
+            cin = null;
         }
 
+        async function lnd() {
+            try {
+                const rsp = await fetch('ndt.json');
+                nd = await rsp.json();
+            } catch (e) {
+                nd = [];
+            }
+        }
 
-        async function disp_j(jny, i) {
-            const rdiv = document.getElementById('rs');
-            const xfers = calc_x(jny.p);
-            const { pathDetails, trainStops } = await gen_jdet(jny);
-            const routeStations = jny.allStations || [];
+        function isnd(tn) { return nd.includes(tn); }
+
+        async function dj(j, i) {
+            const rd = document.getElementById('rs');
+            const xfrs = calx(j.p);
+            const { pd, tstps } = await gjd(j);
+            const rstns = j.allStations || [];
             const jdiv = document.createElement('div');
 
-            let stationsInfo = '';
-            let mapContainer = '';
+            let si = '';
+            let mc = '';
             if (document.getElementById('show_stations').checked) {
-                stationsInfo = `<p><strong>途径站点：</strong> ${routeStations.join(' → ')}</p>`;
-                mapContainer = `<div id="map-${i}" class="map-container"></div>`;
+                si = `<p><strong>途径站点：</strong> ${rstns.join(' → ')}</p>`;
+                mc = `<div id="map-${i}" class="map-container"></div>`;
             }
 
             jdiv.innerHTML = `
     <hr><h3>方案 ${i}</h3>
-    <p><strong>用时：</strong> ${fmt_dur(jny.tdur)} | <strong>换乘：</strong> ${xfers}次</p>
-    <p>${jny.p[0].r.bs} ${fmt_at(jny.idt)} → ${jny.p[jny.p.length - 1].r.al} ${fmt_at(jny.aat)}</p>
-    ${stationsInfo}
-    <h4>路径：</h4><ul>${pathDetails}</ul>
-    ${mapContainer}`;
-            rdiv.appendChild(jdiv);
+    <p><strong>用时：</strong> ${fdur(j.tdur)} | <strong>换乘：</strong> ${xfrs}次</p>
+    <p>${j.p[0].r.bs} ${fat(j.idt)} → ${j.p[j.p.length - 1].r.al} ${fat(j.aat)}</p>
+    ${si}
+    <h4>路径：</h4><ul>${pd}</ul>
+    ${mc}`;
+            rd.appendChild(jdiv);
 
-            if (document.getElementById('show_stations').checked && trainStops && trainStops.length > 0) {
-                init_m(i, trainStops);
+            if (document.getElementById('show_stations').checked && tstps && tstps.length > 0) {
+                imap(i, tstps);
             }
         }
 
-        async function upd_d() {
-            if (isDisplaying) return;
-            isDisplaying = true;
-
+        async function ud() {
+            if (disp) return;
+            disp = true;
             try {
-                while (j_idx < j_buf.length) {
-                    if (j_idx >= max_disp) {
+                while (jix < jbuf.length) {
+                    if (jix >= mdisp) {
                         break;
                     }
-                    await disp_j(j_buf[j_idx], j_idx + 1);
-                    j_idx++;
+                    await dj(jbuf[jix], jix + 1);
+                    jix++;
                 }
             } finally {
-                isDisplaying = false;
+                disp = false;
             }
         }
 
-        function is_ab() {
-            return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100;
-        }
+        function isab() { return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100; }
 
-        function on_scr() {
-            if (is_ab() && j_idx < j_buf.length) {
-                if (j_idx >= max_disp) {
-                    max_disp += B_SZ;
-                    upd_d();
+        function onscr() {
+            if (isab() && jix < jbuf.length) {
+                if (jix >= mdisp) {
+                    mdisp += BSZ;
+                    ud();
                 }
             }
         }
 
-        function add_sl() {
-            if (!sc_act) {
-                window.addEventListener('scroll', on_scr, { passive: true });
-                sc_act = true;
+        function asl() {
+            if (!sact) {
+                window.addEventListener('scroll', onscr, { passive: true });
+                sact = true;
             }
         }
 
-        function rm_sl() {
-            if (sc_act) {
-                window.removeEventListener('scroll', on_scr);
-                sc_act = false;
+        function rsl() {
+            if (sact) {
+                window.removeEventListener('scroll', onscr);
+                sact = false;
             }
         }
 
-        function fmt_dur(m) {
+        function fdur(m) {
             if (m === null) return "N/A";
             const d = Math.floor(m / 1440), rem = m % 1440, h = Math.floor(rem / 60), mins = rem % 60;
             let p = [];
@@ -159,253 +168,225 @@
             return p.length > 0 ? p.join(" ") : "0分钟";
         }
 
-        function fmt_at(am) {
+        function fat(am) {
             if (am === null) return "N/A";
             const day = Math.floor(am / 1440), rem = am % 1440, h = Math.floor(rem / 60), m = rem % 60;
             return `Day ${day + 1}, ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
-        function calc_x(p) {
+        function calx(p) {
             if (!p || p.length <= 1) return 0;
             let x = 0;
             for (let i = 1; i < p.length; i++) { if (p[i].r.tn !== p[i - 1].r.tn) x++; }
             return x;
         }
 
-        async function gen_jdet(jny) {
-            let h = '', ct = jny.idt;
-            const allStations = [];
-            const trainStops = [];
-            for (let i = 0; i < jny.p.length; i++) {
-                const ps = jny.p[i], r = ps.r;
-                if (ps.wtb > 0 && i > 0 && r.tn !== jny.p[i - 1].r.tn) {
-                    h += `<li><strong>${r.bs} 换乘</strong> (${fmt_dur(ps.wtb)})</li>`;
+        async function gjd(j) {
+            let h = '', ct = j.idt;
+            const all_sns = [];
+            const tstps = [];
+            for (let i = 0; i < j.p.length; i++) {
+                const ps = j.p[i], r = ps.r;
+                if (ps.wtb > 0 && i > 0 && r.tn !== j.p[i - 1].r.tn) {
+                    h += `<li><strong>${r.bs} 换乘</strong> (${fdur(ps.wtb)})</li>`;
                 }
                 ct += ps.wtb;
-                const bts = fmt_at(ct).slice(-5), ss = r.bs;
+                const bts = fat(ct).slice(-5), ss = r.bs;
                 ct += r.dur;
-                let fs = r.al, fat = ct;
-                let j = i + 1;
-                while (j < jny.p.length && jny.p[j].r.tn === r.tn) {
-                    const ns = jny.p[j];
-                    fat += ns.wtb + ns.r.dur;
+                let fs = r.al, fat_v = ct;
+                let k = i + 1;
+                while (k < j.p.length && j.p[k].r.tn === r.tn) {
+                    const ns = j.p[k];
+                    fat_v += ns.wtb + ns.r.dur;
                     fs = ns.r.al;
-                    j++;
+                    k++;
                 }
-                const fats = fmt_at(fat).slice(-5);
+                const fats = fat(fat_v).slice(-5);
+                const is_nd = isnd(r.tn);
+                const tstyle = is_nd ? ' style="color: red;"' : '';
 
                 if (document.getElementById('show_stations').checked) {
                     try {
                         const stops = await gts(r.tn, ss, fs);
-                        const stationNames = stops.map(stop => stop.n);
-                        const uniqueStations = [];
-                        for (const station of stationNames) {
-                            if (!uniqueStations.includes(station)) {
-                                uniqueStations.push(station);
+                        const snames = stops.map(stop => stop.n);
+                        const usns = [];
+                        for (const sn of snames) {
+                            if (!usns.includes(sn)) {
+                                usns.push(sn);
                             }
                         }
-                        allStations.push(...uniqueStations);
-
-                        trainStops.push(...stops);
-
-                        h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
-                    } catch (error) {
-                        h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                        all_sns.push(...usns);
+                        tstps.push(...stops);
+                        h += `<li><strong${tstyle}>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                    } catch (e) {
+                        h += `<li><strong${tstyle}>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
                     }
                 } else {
-                    h += `<li><strong>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
+                    h += `<li><strong${tstyle}>${r.tn}:</strong> ${ss} ${bts} → ${fs} ${fats}</li>`;
                 }
-
-                if (j > i + 1) { ct = fat; i = j - 1; }
+                if (k > i + 1) { ct = fat_v; i = k - 1; }
             }
-            jny.allStations = [...new Set(allStations)];
-            return { pathDetails: h, trainStops };
+            j.allStations = [...new Set(all_sns)];
+            return { pd: h, tstps };
         }
 
-        function act() { if (srch) stop_s(); else start_s(); }
+        function act() { if (run) stp_s(); else s_s(); }
 
-        function up_ab() {
+        function uab() {
             const btn = document.getElementById('ab');
-            btn.textContent = srch ? '停止' : '搜索';
-            btn.disabled = (!d_init && !srch);
+            btn.textContent = run ? '停止' : '搜索';
+            btn.disabled = (!rdy && !run);
         }
 
-        function start_s() {
-            if (srch || !d_init) return;
-            const o = document.getElementById('o').value.trim();
-            const d = document.getElementById('d').value.trim();
-            if (!o || !d) { up_st('输入起点和终点'); return; }
+        function s_s() {
+            if (run || !rdy) return;
+            const o_val = document.getElementById('o').value.trim();
+            const d_val = document.getElementById('d').value.trim();
+            if (!o_val || !d_val) { us('输入起点和终点'); return; }
 
-            rm_sl();
-            j_buf = [];
-            j_idx = 0;
-            jcnt = 0;
-            max_disp = B_SZ;
-            isDisplaying = false;
+            rsl();
+            jbuf = [];
+            jix = 0;
+            jc = 0;
+            mdisp = BSZ;
+            disp = false;
 
-            srch = true;
-            up_ab();
+            run = true;
+            uab();
             document.getElementById('rs').innerHTML = '';
-            up_st('搜索');
-
-            add_sl();
+            us('搜索');
+            asl();
 
             w.postMessage({
-                t: 'start', o, d,
+                t: 'start', o: o_val, d: d_val,
                 mtt: parseInt(document.getElementById('mtt').value),
                 esc_o: document.getElementById('esc_o').checked,
                 esc_d: document.getElementById('esc_d').checked
             });
         }
 
-        function stop_s() {
-            if (srch && w) {
+        function stp_s() {
+            if (run && w) {
                 w.postMessage({ t: 'stop' });
             }
-            fin_s();
+            f_s();
         }
-
-        const gtsPromises = new Map();
 
         function gts(n, f, t) {
             if (w) {
-                const requestId = Date.now() + Math.random();
-                const promise = new Promise((resolve, reject) => {
-                    gtsPromises.set(requestId, { resolve, reject });
+                const rid = Date.now() + Math.random();
+                const p = new Promise((res, rej) => {
+                    gtsp.set(rid, { res, rej });
                     setTimeout(() => {
-                        if (gtsPromises.has(requestId)) {
-                            gtsPromises.delete(requestId);
-                            reject(new Error('gts request timeout'));
+                        if (gtsp.has(rid)) {
+                            gtsp.delete(rid);
+                            rej(new Error('gts request timeout'));
                         }
                     }, 10000);
                 });
-
-                w.postMessage({
-                    t: 'gts',
-                    requestId: requestId,
-                    d: { n: n, f: f, t: t }
-                });
-
-                return promise;
+                w.postMessage({ t: 'gts', requestId: rid, d: { n, f, t } });
+                return p;
             }
-
             return Promise.reject(new Error('Worker not initialized'));
         }
 
-        function fin_s() {
-            srch = false;
-            up_ab();
+        function f_s() {
+            run = false;
+            uab();
         }
 
-        function init_wkr() {
+        function iw() {
             if (w) return;
-            up_st('加载');
-            up_ab();
+            us('加载');
+            uab();
             w = new Worker(`worker.js?v=${ts}`);
-
             w.onmessage = function (e) {
-                const { t, d } = e.data;
+                const { t, d, requestId } = e.data;
                 switch (t) {
                     case 'j_fnd':
-                        jcnt++;
-                        j_buf.push(d);
-                        up_st(`查询到 ${jcnt} 条方案`);
-                        if (!isDisplaying) {
-                            upd_d();
-                        }
+                        jc++;
+                        jbuf.push(d);
+                        us(`查询到 ${jc} 条方案`);
+                        if (!disp) ud();
                         break;
                     case 'done':
-                        fin_s();
-                        if (jcnt === 0) {
-                            up_st('无方案');
+                        f_s();
+                        if (jc === 0) {
+                            us('无方案');
                         } else {
-                            if (!isDisplaying) {
-                                upd_d();
-                            }
-                            up_st(`共 ${jcnt} 条方案`);
+                            if (!disp) ud();
+                            us(`共 ${jc} 条方案`);
                         }
                         break;
                     case 'err':
-                        up_st(d);
-                        fin_s();
+                        us(d);
+                        f_s();
                         break;
                     case 'stat':
-                        up_st(d);
+                        us(d);
                         break;
                     case 'init_done':
-                        d_init = true;
-                        up_st('就绪');
-                        up_ab();
+                        rdy = true;
+                        us('就绪');
+                        uab();
                         w.postMessage({ t: 'get_stn' });
                         break;
                     case 'stn':
-                        stns = d;
+                        sns = d;
                         break;
                     case 'ts':
-                        if (e.data.requestId && gtsPromises.has(e.data.requestId)) {
-                            const { resolve } = gtsPromises.get(e.data.requestId);
-                            gtsPromises.delete(e.data.requestId);
-                            resolve(d);
+                        if (requestId && gtsp.has(requestId)) {
+                            const { res } = gtsp.get(requestId);
+                            gtsp.delete(requestId);
+                            res(d);
                         }
                         break;
                 }
             };
-
-            w.onerror = function (err) { up_st(err.message); fin_s(); };
+            w.onerror = function (err) { us(err.message); f_s(); };
             w.postMessage({ t: 'init_only' });
         }
 
         document.getElementById('o').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
         document.getElementById('d').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
-        document.getElementById('o').addEventListener('input', function () { show_sug(this); });
-        document.getElementById('d').addEventListener('input', function () { show_sug(this); });
-        document.getElementById('o').addEventListener('focus', function () { if (this.value) show_sug(this); });
-        document.getElementById('d').addEventListener('focus', function () { if (this.value) show_sug(this); });
-        document.body.addEventListener('click', hide_sug, true);
+        document.getElementById('o').addEventListener('input', function () { ss(this); });
+        document.getElementById('d').addEventListener('input', function () { ss(this); });
+        document.getElementById('o').addEventListener('focus', function () { if (this.value) ss(this); });
+        document.getElementById('d').addEventListener('focus', function () { if (this.value) ss(this); });
+        document.body.addEventListener('click', hs, true);
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             document.getElementById('ab').addEventListener('click', act);
-            up_ab();
-            init_wkr();
+            uab();
+            await lnd();
+            iw();
         });
-        up_st('启动');
+        us('启动');
 
-        function init_m(mapId, stops) {
+        function imap(mapId, stops) {
             const map = L.map(`map-${mapId}`).setView([35.8617, 104.1954], 4);
-
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 maxZoom: 19
             }).addTo(map);
 
             if (stops && stops.length > 0) {
-                const markers = [];
-                const latlngs = [];
+                const mkrs = [];
+                const lls = [];
 
-                stops.forEach(stop => {
-
-                    latlngs.push([stop.lat, stop.lon]);
-
-                    const circleMarker = L.circleMarker([stop.lat, stop.lon], {
-                        radius: 3,
-                        fillColor: "#000000",
-                        color: "#000000",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 1
+                stops.forEach(stp => {
+                    lls.push([stp.lat, stp.lon]);
+                    const cm = L.circleMarker([stp.lat, stp.lon], {
+                        radius: 3, fillColor: "#000000", color: "#000000",
+                        weight: 1, opacity: 1, fillOpacity: 1
                     }).addTo(map);
-
-                    circleMarker.bindPopup(stop.n);
-                    markers.push(circleMarker);
+                    cm.bindPopup(stp.n);
+                    mkrs.push(cm);
                 });
 
-                const railwayLine = L.polyline(latlngs, {
-                    color: '#000000',
-                    weight: 4,
-                }).addTo(map);
-
-                const group = new L.featureGroup([...markers, railwayLine]);
-                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                const rline = L.polyline(lls, { color: '#000000', weight: 4 }).addTo(map);
+                const grp = new L.featureGroup([...mkrs, rline]);
+                map.fitBounds(grp.getBounds(), { padding: [50, 50] });
             }
         }
     </script>

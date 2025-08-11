@@ -1,5 +1,6 @@
 TARGET_DIR = dist
 WASM_DIR = src/wasm
+DATA_DIR = data
 TEMPLATES_DIR = src/templates
 WASM_FILE_NAME = transit_bg.wasm
 
@@ -19,6 +20,9 @@ build:
 	@echo "Copying templates..."
 	cp -r $(TEMPLATES_DIR)/* $(TARGET_DIR)/
 	
+	@echo "Copying ndt.json"
+	cp $(DATA_DIR)/ndt.json $(TARGET_DIR)/
+
 	@echo "Stripping WASM file..."
 	wasm-strip $(TARGET_DIR)/pkg/$(WASM_FILE_NAME)
 	
