@@ -431,25 +431,32 @@
                 const lls = [];
 
                 stops.forEach(stp => {
-                    lls.push([stp.lat, stp.lon]);
-                    const cm = L.circleMarker([stp.lat, stp.lon], {
-                        radius: 3, fillColor: "#000000", color: "#000000",
-                        weight: 1, opacity: 1, fillOpacity: 1
-                    }).addTo(map);
-                    cm.bindPopup(stp.n);
-                    mkrs.push(cm);
+                    if (stp.lat !== undefined && stp.lon !== undefined && 
+                        stp.lat !== 0 && stp.lon !== 0 && 
+                        !isNaN(stp.lat) && !isNaN(stp.lon)) {
+                        lls.push([stp.lat, stp.lon]);
+                        const cm = L.circleMarker([stp.lat, stp.lon], {
+                            radius: 3, fillColor: "#000000", color: "#000000",
+                            weight: 1, opacity: 1, fillOpacity: 1
+                        }).addTo(map);
+                        cm.bindPopup(stp.n);
+                        mkrs.push(cm);
+                    }
                 });
 
-                const rline = L.polyline(lls, { color: '#000000', weight: 4 }).addTo(map);
-                const grp = new L.featureGroup([...mkrs, rline]);
-                map.fitBounds(grp.getBounds(), { padding: [50, 50] });
+                if (lls.length > 0) {
+                    const rline = L.polyline(lls, { color: '#000000', weight: 4 }).addTo(map);
+                    const grp = new L.featureGroup([...mkrs, rline]);
+                    map.fitBounds(grp.getBounds(), { padding: [50, 50] });
+                }
             }
         }
     </script>
 
     <hr>
     <p>
-        © 2025 noxylva. Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">AGPLv3</a>
+        © 2025 noxylva. Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">AGPLv3</a> | 
+        <a href="https://github.com/undef-i/CRTransfer" target="_blank">GitHub</a>
     </p>
 </body>
 

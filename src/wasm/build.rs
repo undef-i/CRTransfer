@@ -119,9 +119,16 @@ fn main() {
     }
 
     let sl_str = fs::read_to_string("../../data/sl.json").expect("Failed to read sl.json");
-    let locations: HashMap<String, SL> = serde_json::from_str(&sl_str).expect("Failed to parse sl.json");
+    let locations: HashMap<String, SL> =
+        serde_json::from_str(&sl_str).expect("Failed to parse sl.json");
 
-    let p_data = PData { dat, scd, s2i, i2s, locations };
+    let p_data = PData {
+        dat,
+        scd,
+        s2i,
+        i2s,
+        locations,
+    };
     let encoded: Vec<u8> = bincode::serialize(&p_data).expect("Failed to serialize data");
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::best());

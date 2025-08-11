@@ -1,14 +1,14 @@
-use wasm_bindgen::prelude::*;
-use std::collections::{HashMap, BinaryHeap, HashSet, VecDeque};
-use std::cmp::Ordering;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::io::prelude::*;
-use serde::{Deserialize, Serialize};
 use flate2::read::GzDecoder;
+use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::io::prelude::*;
+use std::rc::Rc;
+use wasm_bindgen::prelude::*;
 
-use wasm_bindgen_futures::JsFuture;
 use js_sys::Promise;
+use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, WorkerGlobalScope};
 
 #[derive(Deserialize)]
@@ -28,7 +28,6 @@ struct RawRdat {
     t: Vec<RawTrain>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct R {
     pub tn: String,
@@ -40,16 +39,28 @@ pub struct R {
     pub dur: i32,
 }
 
-fn ser_sid<S>(sid: &usize, ser: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+fn ser_sid<S>(sid: &usize, ser: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
     let sname = g_sname(*sid).unwrap_or_else(|| format!("S_{}", sid));
     ser.serialize_str(&sname)
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct PS { pub wtb: i32, pub r: R, }
+pub struct PS {
+    pub wtb: i32,
+    pub r: R,
+}
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Jny { pub tdur: i32, pub aat: i32, pub idt: i32, pub x: i32, pub p: Vec<PS>, }
+pub struct Jny {
+    pub tdur: i32,
+    pub aat: i32,
+    pub idt: i32,
+    pub x: i32,
+    pub p: Vec<PS>,
+}
 
 #[derive(Deserialize)]
 struct PData {
@@ -59,7 +70,6 @@ struct PData {
     i2s: Vec<String>,
     locations: HashMap<String, SL>,
 }
-
 
 thread_local! {
     static DAT: RefCell<Option<HashMap<usize, Vec<R>>>> = RefCell::new(None);
@@ -71,14 +81,32 @@ thread_local! {
     static STOP: RefCell<bool> = RefCell::new(false);
 }
 
-
 #[derive(Debug, Clone)]
-struct St { tdur: i32, aat: i32, sid: usize, idt: i32, x: i32, p: Option<Rc<St>>, r: Option<R>, }
-impl PartialEq for St { fn eq(&self, o: &Self) -> bool { self.tdur == o.tdur } }
+struct St {
+    tdur: i32,
+    aat: i32,
+    sid: usize,
+    idt: i32,
+    x: i32,
+    p: Option<Rc<St>>,
+    r: Option<R>,
+}
+impl PartialEq for St {
+    fn eq(&self, o: &Self) -> bool {
+        self.tdur == o.tdur
+    }
+}
 impl Eq for St {}
-impl PartialOrd for St { fn partial_cmp(&self, o: &Self) -> Option<Ordering> { Some(self.cmp(o)) } }
-impl Ord for St { fn cmp(&self, o: &Self) -> Ordering { o.tdur.cmp(&self.tdur).then_with(|| self.idt.cmp(&o.idt)) } }
-
+impl PartialOrd for St {
+    fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for St {
+    fn cmp(&self, o: &Self) -> Ordering {
+        o.tdur.cmp(&self.tdur).then_with(|| self.idt.cmp(&o.idt))
+    }
+}
 
 const PDATA_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/transit_data.bin"));
 
@@ -91,44 +119,75 @@ pub fn init() -> Result<(), JsValue> {
 
     let d: PData = bincode::deserialize(&bytes)
         .map_err(|e| JsValue::from_str(&format!("Data load error: {}", e)))?;
-    
+
     DAT.with(|dat| *dat.borrow_mut() = Some(d.dat));
     SCD.with(|scd| *scd.borrow_mut() = Some(d.scd));
     S2I.with(|s2i| *s2i.borrow_mut() = Some(d.s2i));
     I2S.with(|i2s| *i2s.borrow_mut() = Some(d.i2s));
     LOCATIONS.with(|locations| *locations.borrow_mut() = Some(d.locations));
 
-
     let rdat_raw = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/rdat.json"));
     let rdat: RawRdat = serde_json::from_str(rdat_raw)
         .map_err(|e| JsValue::from_str(&format!("Failed to parse rdat.json: {}", e)))?;
 
-    let rdat_map: HashMap<String, RawTrain> = rdat.t.into_iter().map(|t| (t.tn.clone(), t)).collect();
+    let rdat_map: HashMap<String, RawTrain> =
+        rdat.t.into_iter().map(|t| (t.tn.clone(), t)).collect();
 
     RDAT_MAP.with(|map| *map.borrow_mut() = Some(rdat_map));
 
     Ok(())
 }
 
-
 #[wasm_bindgen]
-pub fn stop() { STOP.with(|s| { *s.borrow_mut() = true; }); }
-fn is_stopped() -> bool { STOP.with(|s| *s.borrow()) }
-fn rst_stop() { STOP.with(|s| { *s.borrow_mut() = false; }); }
+pub fn stop() {
+    STOP.with(|s| {
+        *s.borrow_mut() = true;
+    });
+}
+fn is_stopped() -> bool {
+    STOP.with(|s| *s.borrow())
+}
+fn rst_stop() {
+    STOP.with(|s| {
+        *s.borrow_mut() = false;
+    });
+}
 
-fn g_sid(s: &str) -> Option<usize> { S2I.with(|d| d.borrow().as_ref()?.get(s).copied()) }
-fn g_sname(id: usize) -> Option<String> { I2S.with(|d| d.borrow().as_ref()?.get(id).cloned()) }
-fn g_sgrp(id: usize) -> Vec<usize> { SCD.with(|d| d.borrow().as_ref().and_then(|scd| scd.get(&id).cloned()).unwrap_or_else(|| vec![id])) }
-fn g_location(name: &str) -> Option<SL> { LOCATIONS.with(|d| d.borrow().as_ref()?.get(name).cloned()) }
-fn cwait(arr: i32, dep: i32) -> i32 { if arr <= dep { dep - arr } else { 1440 - arr + dep } }
-
+fn g_sid(s: &str) -> Option<usize> {
+    S2I.with(|d| d.borrow().as_ref()?.get(s).copied())
+}
+fn g_sname(id: usize) -> Option<String> {
+    I2S.with(|d| d.borrow().as_ref()?.get(id).cloned())
+}
+fn g_sgrp(id: usize) -> Vec<usize> {
+    SCD.with(|d| {
+        d.borrow()
+            .as_ref()
+            .and_then(|scd| scd.get(&id).cloned())
+            .unwrap_or_else(|| vec![id])
+    })
+}
+fn g_location(name: &str) -> Option<SL> {
+    LOCATIONS.with(|d| d.borrow().as_ref()?.get(name).cloned())
+}
+fn cwait(arr: i32, dep: i32) -> i32 {
+    if arr <= dep {
+        dep - arr
+    } else {
+        1440 - arr + dep
+    }
+}
 
 fn mk_path(st: &St) -> Vec<PS> {
     let mut segs = Vec::new();
     let mut cur = Some(Rc::new(st.clone()));
     while let Some(c) = cur {
         if let Some(ref r) = c.r {
-            let wtb = if let Some(ref p) = c.p { (c.aat - r.dur) - p.aat } else { 0 };
+            let wtb = if let Some(ref p) = c.p {
+                (c.aat - r.dur) - p.aat
+            } else {
+                0
+            };
             segs.push(PS { wtb, r: r.clone() });
         }
         cur = c.p.clone();
@@ -139,7 +198,12 @@ fn mk_path(st: &St) -> Vec<PS> {
 
 #[wasm_bindgen]
 pub fn g_stns() -> Result<Vec<String>, JsValue> {
-    I2S.with(|d| d.borrow().as_ref().cloned().ok_or_else(|| JsValue::from_str("data not loaded")))
+    I2S.with(|d| {
+        d.borrow()
+            .as_ref()
+            .cloned()
+            .ok_or_else(|| JsValue::from_str("data not loaded"))
+    })
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -178,28 +242,42 @@ pub fn gts(tn: &str, from: &str, to: &str) -> Result<JsValue, JsValue> {
         let map_opt = map_cell.borrow();
         let rdat_map = map_opt.as_ref().ok_or("Error: RDAT_MAP not initialized")?;
 
-        let rt = rdat_map.get(tn).ok_or_else(|| format!("Train '{}' not found", tn))?;
+        let rt = rdat_map
+            .get(tn)
+            .ok_or_else(|| format!("Train '{}' not found", tn))?;
 
-        let start_idx = rt.s.iter().position(|s| s.n == from).ok_or_else(|| format!("Station '{}' not found in train '{}'", from, tn))?;
-        let end_idx = rt.s.iter().position(|s| s.n == to).ok_or_else(|| format!("Station '{}' not found in train '{}'", to, tn))?;
-        
+        let start_idx =
+            rt.s.iter()
+                .position(|s| s.n == from)
+                .ok_or_else(|| format!("Station '{}' not found in train '{}'", from, tn))?;
+        let end_idx =
+            rt.s.iter()
+                .position(|s| s.n == to)
+                .ok_or_else(|| format!("Station '{}' not found in train '{}'", to, tn))?;
+
         if start_idx > end_idx {
-            return Err(format!("'From' station appears after 'To' station in this route"));
+            return Err(format!(
+                "'From' station appears after 'To' station in this route"
+            ));
         }
 
         let stations_segment = &rt.s[start_idx..=end_idx];
-        let result_stops: Vec<Stl> = stations_segment.iter().map(|s| {
-            let location = g_location(&s.n).unwrap_or(SL { lat: None, lon: None });
-            Stl {
-                n: s.n.clone(),
-                lat: location.lat.unwrap_or(0.0),
-                lon: location.lon.unwrap_or(0.0),
-            }
-        }).collect();
+        let result_stops: Vec<Stl> = stations_segment
+            .iter()
+            .map(|s| {
+                let location = g_location(&s.n).unwrap_or(SL {
+                    lat: None,
+                    lon: None,
+                });
+                Stl {
+                    n: s.n.clone(),
+                    lat: location.lat.unwrap_or(0.0),
+                    lon: location.lon.unwrap_or(0.0),
+                }
+            })
+            .collect();
 
-        serde_json::to_string(&result_stops)
-            .map_err(|e| format!("Serialization error: {}", e))
-
+        serde_json::to_string(&result_stops).map_err(|e| format!("Serialization error: {}", e))
     });
 
     match result {
@@ -208,48 +286,64 @@ pub fn gts(tn: &str, from: &str, to: &str) -> Result<JsValue, JsValue> {
     }
 }
 
-
 #[wasm_bindgen]
-extern "C" { fn on_jny(j: &str); }
-
+extern "C" {
+    fn on_jny(j: &str);
+}
 
 async fn sleep(ms: i32) -> Result<(), JsValue> {
     let p = Promise::new(&mut |resolve, _| {
         let g = js_sys::global();
         if let Ok(wscope) = g.dyn_into::<WorkerGlobalScope>() {
-            wscope.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms).unwrap();
+            wscope
+                .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
+                .unwrap();
         } else if let Some(win) = window() {
-            win.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms).unwrap();
+            win.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
+                .unwrap();
         }
     });
     JsFuture::from(p).await?;
     Ok(())
 }
 
-
 #[wasm_bindgen]
 pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
     rst_stop();
-    let rfs = DAT.with(|dat| dat.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("dat not initd"))?;
+    let rfs = DAT
+        .with(|dat| dat.borrow().as_ref().cloned())
+        .ok_or_else(|| JsValue::from_str("dat not initd"))?;
     let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
     let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
-    
+
     let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
-    let dset: HashSet<usize> = if esc_d { g_sgrp(did).into_iter().collect() } else { [did].into_iter().collect() };
-    
+    let dset: HashSet<usize> = if esc_d {
+        g_sgrp(did).into_iter().collect()
+    } else {
+        [did].into_iter().collect()
+    };
+
     let mut pq = BinaryHeap::with_capacity(50000);
     let mut v: HashMap<usize, Vec<(i32, i32, i32)>> = HashMap::with_capacity(5000);
-    
+
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
-                    pq.push(St { tdur: r.dur, aat, sid: r.al, idt: r.dtr, x: 0, p: None, r: Some(r.clone()) });
+                    pq.push(St {
+                        tdur: r.dur,
+                        aat,
+                        sid: r.al,
+                        idt: r.dtr,
+                        x: 0,
+                        p: None,
+                        r: Some(r.clone()),
+                    });
                 }
             }
         }
     }
-    
+
     let mut i = 0;
     while let Some(c) = pq.pop() {
         i += 1;
@@ -257,43 +351,87 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
             sleep(0).await?;
         }
 
-        if is_stopped() { break; }
+        if is_stopped() {
+            break;
+        }
 
         if dset.contains(&c.sid) {
             let p = mk_path(&c);
-            let jny = Jny { tdur: c.tdur, aat: c.aat, idt: c.idt, x: c.x, p };
-            if let Ok(j) = serde_json::to_string(&jny) { on_jny(&j); }
+            let jny = Jny {
+                tdur: c.tdur,
+                aat: c.aat,
+                idt: c.idt,
+                x: c.x,
+                p,
+            };
+            if let Ok(j) = serde_json::to_string(&jny) {
+                on_jny(&j);
+            }
             continue;
         }
 
         let (arr, dep, x) = (c.aat, c.idt, c.x);
         if let Some(prof) = v.get(&c.sid) {
-            if prof.iter().any(|&(a, d, x_prof)| a <= arr && d >= dep && x_prof <= x) { continue; }
+            if prof
+                .iter()
+                .any(|&(a, d, x_prof)| a <= arr && d >= dep && x_prof <= x)
+            {
+                continue;
+            }
         }
         let prof = v.entry(c.sid).or_default();
         prof.retain(|&(a, d, x_prof)| !(arr <= a && dep >= d && x <= x_prof));
         prof.push((arr, dep, x));
-        
+
         if let Some(next_rs) = rfs.get(&c.sid) {
             for next_r in next_rs {
-                if is_stopped() { break; }
-                let is_cont = if let Some(ref prev_r) = c.r { prev_r.tn == next_r.tn } else { false };
+                if is_stopped() {
+                    break;
+                }
+                let is_cont = if let Some(ref prev_r) = c.r {
+                    prev_r.tn == next_r.tn
+                } else {
+                    false
+                };
                 let mut wait = cwait(c.aat % 1440, next_r.dtr % 1440);
 
                 if !is_cont {
-                    while wait < mtt { wait = wait.saturating_add(1440); }
+                    while wait < mtt {
+                        wait = wait.saturating_add(1440);
+                    }
                 }
-                if wait == i32::MAX { continue; };
-                
-                let next_aat = match c.aat.checked_add(wait).and_then(|val| val.checked_add(next_r.dur)) { Some(val) => val, None => continue };
-                let new_tdur = match next_aat.checked_sub(c.idt) { Some(val) => val, None => continue };
+                if wait == i32::MAX {
+                    continue;
+                };
+
+                let next_aat = match c
+                    .aat
+                    .checked_add(wait)
+                    .and_then(|val| val.checked_add(next_r.dur))
+                {
+                    Some(val) => val,
+                    None => continue,
+                };
+                let new_tdur = match next_aat.checked_sub(c.idt) {
+                    Some(val) => val,
+                    None => continue,
+                };
                 let new_x = if is_cont { c.x } else { c.x + 1 };
-                pq.push(St { tdur: new_tdur, aat: next_aat, sid: next_r.al, idt: c.idt, x: new_x, p: Some(Rc::new(c.clone())), r: Some(next_r.clone()) });
+                pq.push(St {
+                    tdur: new_tdur,
+                    aat: next_aat,
+                    sid: next_r.al,
+                    idt: c.idt,
+                    x: new_x,
+                    p: Some(Rc::new(c.clone())),
+                    r: Some(next_r.clone()),
+                });
             }
         }
     }
     Ok(())
 }
+
 #[derive(Debug, Clone)]
 struct StMx {
     tdur: i32,
@@ -310,7 +448,11 @@ fn mk_path_mx(st: &StMx) -> Vec<PS> {
     let mut cur = Some(Rc::new(st.clone()));
     while let Some(c) = cur {
         if let Some(ref r) = c.r {
-            let wtb = if let Some(ref p) = c.p { (c.aat - r.dur) - p.aat } else { 0 };
+            let wtb = if let Some(ref p) = c.p {
+                (c.aat - r.dur) - p.aat
+            } else {
+                0
+            };
             segs.push(PS { wtb, r: r.clone() });
         }
         cur = c.p.clone();
@@ -318,24 +460,39 @@ fn mk_path_mx(st: &StMx) -> Vec<PS> {
     segs.reverse();
     segs
 }
+
 #[wasm_bindgen(js_name = find_mx)]
 pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
     rst_stop();
-    let rfs = DAT.with(|dat| dat.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("dat not initd"))?;
+    let rfs = DAT
+        .with(|dat| dat.borrow().as_ref().cloned())
+        .ok_or_else(|| JsValue::from_str("dat not initd"))?;
     let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
     let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
 
     let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
-    let dset: HashSet<usize> = if esc_d { g_sgrp(did).into_iter().collect() } else { [did].into_iter().collect() };
+    let dset: HashSet<usize> = if esc_d {
+        g_sgrp(did).into_iter().collect()
+    } else {
+        [did].into_iter().collect()
+    };
 
     let mut q = VecDeque::with_capacity(50000);
     let mut visited: HashMap<(usize, String), i32> = HashMap::with_capacity(10000);
-    
+
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
-                    q.push_back(StMx { tdur: r.dur, aat, sid: r.al, idt: r.dtr, x: 0, p: None, r: Some(r.clone()) });
+                    q.push_back(StMx {
+                        tdur: r.dur,
+                        aat,
+                        sid: r.al,
+                        idt: r.dtr,
+                        x: 0,
+                        p: None,
+                        r: Some(r.clone()),
+                    });
                 }
             }
         }
@@ -344,10 +501,16 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
     let mut min_found_x = i32::MAX;
 
     let mut i = 0;
-    while let Some(c) = q.pop_front() {
+    while let Some(c_val) = q.pop_front() {
         i += 1;
-        if i % 10000 == 0 { sleep(0).await?; }
-        if is_stopped() { break; }
+        if i % 10000 == 0 {
+            sleep(0).await?;
+        }
+        if is_stopped() {
+            break;
+        }
+
+        let c = Rc::new(c_val);
 
         if c.x > min_found_x {
             continue;
@@ -365,34 +528,66 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
         if dset.contains(&c.sid) {
             min_found_x = c.x;
             let p = mk_path_mx(&c);
-            let jny = Jny { tdur: c.tdur, aat: c.aat, idt: c.idt, x: c.x, p };
-            if let Ok(j) = serde_json::to_string(&jny) { on_jny(&j); }
+            let jny = Jny {
+                tdur: c.tdur,
+                aat: c.aat,
+                idt: c.idt,
+                x: c.x,
+                p,
+            };
+            if let Ok(j) = serde_json::to_string(&jny) {
+                on_jny(&j);
+            }
             continue;
         }
 
         if let Some(next_rs) = rfs.get(&c.sid) {
             for next_r in next_rs {
-                if is_stopped() { break; }
-                let is_cont = if let Some(ref prev_r) = c.r { prev_r.tn == next_r.tn } else { false };
+                if is_stopped() {
+                    break;
+                }
+                let is_cont = if let Some(ref prev_r) = c.r {
+                    prev_r.tn == next_r.tn
+                } else {
+                    false
+                };
                 let new_x = if is_cont { c.x } else { c.x + 1 };
 
                 if new_x > min_found_x {
                     continue;
                 }
-                
+
                 let mut wait = cwait(c.aat % 1440, next_r.dtr % 1440);
                 if !is_cont {
-                    while wait < mtt { wait = wait.saturating_add(1440); }
+                    while wait < mtt {
+                        wait = wait.saturating_add(1440);
+                    }
                 }
-                if wait == i32::MAX { continue; };
+                if wait == i32::MAX {
+                    continue;
+                };
 
-                let next_aat = match c.aat.checked_add(wait).and_then(|val| val.checked_add(next_r.dur)) { Some(val) => val, None => continue };
-                let new_tdur = match next_aat.checked_sub(c.idt) { Some(val) => val, None => continue };
-                
+                let next_aat = match c
+                    .aat
+                    .checked_add(wait)
+                    .and_then(|val| val.checked_add(next_r.dur))
+                {
+                    Some(val) => val,
+                    None => continue,
+                };
+                let new_tdur = match next_aat.checked_sub(c.idt) {
+                    Some(val) => val,
+                    None => continue,
+                };
+
                 let new_state = StMx {
-                    tdur: new_tdur, aat: next_aat, sid: next_r.al,
-                    idt: c.idt, x: new_x, p: Some(Rc::new(c.clone())),
-                    r: Some(next_r.clone())
+                    tdur: new_tdur,
+                    aat: next_aat,
+                    sid: next_r.al,
+                    idt: c.idt,
+                    x: new_x,
+                    p: Some(Rc::clone(&c)),
+                    r: Some(next_r.clone()),
                 };
 
                 if is_cont {
@@ -403,6 +598,6 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
             }
         }
     }
-    
+
     Ok(())
 }
