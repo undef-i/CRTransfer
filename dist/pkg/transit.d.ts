@@ -24,8 +24,8 @@ export interface InitOutput {
   readonly __externref_table_dealloc: (a: number) => void;
   readonly __externref_drop_slice: (a: number, b: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly closure46_externref_shim: (a: number, b: number, c: any) => void;
-  readonly closure68_externref_shim: (a: number, b: number, c: any, d: any) => void;
+  readonly closure47_externref_shim: (a: number, b: number, c: any) => void;
+  readonly closure69_externref_shim: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_start: () => void;
 }
 

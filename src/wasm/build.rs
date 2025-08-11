@@ -124,7 +124,7 @@ fn main() {
     let p_data = PData { dat, scd, s2i, i2s, locations };
     let encoded: Vec<u8> = bincode::serialize(&p_data).expect("Failed to serialize data");
 
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
     encoder
         .write_all(&encoded)
         .expect("Failed to write to gzip encoder");

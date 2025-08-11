@@ -67,6 +67,7 @@ thread_local! {
     static S2I: RefCell<Option<HashMap<String, usize>>> = RefCell::new(None);
     static I2S: RefCell<Option<Vec<String>>> = RefCell::new(None);
     static LOCATIONS: RefCell<Option<HashMap<String, SL>>> = RefCell::new(None);
+    static RDAT_MAP: RefCell<Option<HashMap<String, RawTrain>>> = RefCell::new(None);
     static STOP: RefCell<bool> = RefCell::new(false);
 }
 
@@ -96,6 +97,16 @@ pub fn init() -> Result<(), JsValue> {
     S2I.with(|s2i| *s2i.borrow_mut() = Some(d.s2i));
     I2S.with(|i2s| *i2s.borrow_mut() = Some(d.i2s));
     LOCATIONS.with(|locations| *locations.borrow_mut() = Some(d.locations));
+
+
+    let rdat_raw = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/rdat.json"));
+    let rdat: RawRdat = serde_json::from_str(rdat_raw)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse rdat.json: {}", e)))?;
+
+    let rdat_map: HashMap<String, RawTrain> = rdat.t.into_iter().map(|t| (t.tn.clone(), t)).collect();
+
+    RDAT_MAP.with(|map| *map.borrow_mut() = Some(rdat_map));
+
     Ok(())
 }
 
@@ -163,58 +174,38 @@ pub struct SL {
 
 #[wasm_bindgen]
 pub fn gts(tn: &str, from: &str, to: &str) -> Result<JsValue, JsValue> {
-    let rfs = DAT.with(|dat| dat.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("dat not initd"))?;
-    let _s2i = S2I.with(|d| d.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("data not loaded"))?;
-    let _i2s = I2S.with(|d| d.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("data not loaded"))?;
-    let _sgrps = SCD.with(|d| d.borrow().as_ref().cloned()).ok_or_else(|| JsValue::from_str("scd not loaded"))?;
+    let result = RDAT_MAP.with(|map_cell| {
+        let map_opt = map_cell.borrow();
+        let rdat_map = map_opt.as_ref().ok_or("Error: RDAT_MAP not initialized")?;
 
-    for (_, ts) in rfs.iter() {
-        for t in ts {
-            if t.tn == tn {
-                let rdat_raw = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/rdat.json"));
-                let rdat: RawRdat = serde_json::from_str(rdat_raw).map_err(|e| JsValue::from_str(&format!("Failed to parse rdat.json: {}", e)))?;
-                
-                if let Some(rt) = rdat.t.iter().find(|t| t.tn == tn) {
-                    let mut ss: Vec<Stl> = Vec::new();
-                    let mut coll = false;
-                    
-                    for s in &rt.s {
-                        if s.n == from {
-                            coll = true;
-                        }
-                        
-                        if coll {
-                            let mut lat: f64 = 0.0;
-                            let mut lon: f64 = 0.0;
-                            
-                            if let Some(location) = g_location(&s.n) {
-                                if let Some(latitude) = location.lat {
-                                    lat = latitude;
-                                }
-                                if let Some(longitude) = location.lon {
-                                    lon = longitude;
-                                }
-                            }
-                            
-                            ss.push(Stl { n: s.n.clone(), lat, lon });
-                        }
-                        
-                        if s.n == to {
-                            break;
-                        }
-                    }
-                    
-                    if !ss.is_empty() {
-                        let json = serde_json::to_string(&ss).map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?;
-                        return Ok(JsValue::from_str(&json));
-                    }
-                }
-                break;
-            }
+        let rt = rdat_map.get(tn).ok_or_else(|| format!("Train '{}' not found", tn))?;
+
+        let start_idx = rt.s.iter().position(|s| s.n == from).ok_or_else(|| format!("Station '{}' not found in train '{}'", from, tn))?;
+        let end_idx = rt.s.iter().position(|s| s.n == to).ok_or_else(|| format!("Station '{}' not found in train '{}'", to, tn))?;
+        
+        if start_idx > end_idx {
+            return Err(format!("'From' station appears after 'To' station in this route"));
         }
+
+        let stations_segment = &rt.s[start_idx..=end_idx];
+        let result_stops: Vec<Stl> = stations_segment.iter().map(|s| {
+            let location = g_location(&s.n).unwrap_or(SL { lat: None, lon: None });
+            Stl {
+                n: s.n.clone(),
+                lat: location.lat.unwrap_or(0.0),
+                lon: location.lon.unwrap_or(0.0),
+            }
+        }).collect();
+
+        serde_json::to_string(&result_stops)
+            .map_err(|e| format!("Serialization error: {}", e))
+
+    });
+
+    match result {
+        Ok(json_string) => Ok(JsValue::from_str(&json_string)),
+        Err(e) => Err(JsValue::from_str(&e.to_string())),
     }
-    
-    Err(JsValue::from_str(&format!("Train {} from {} to {} not found", tn, from, to)))
 }
 
 
