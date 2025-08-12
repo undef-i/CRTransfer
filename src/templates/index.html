@@ -9,7 +9,6 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="pangu.js"></script>
     <style>
         .map-container {
             width: 100%;
@@ -94,8 +93,7 @@
         const gtsp = new Map();
 
         function us(m) {
-            const message = pangu.spacing(m);
-            document.getElementById('st').innerHTML = `<p><strong>${message}</strong></p>`;
+            document.getElementById('st').innerHTML = `<p><strong>${m}</strong></p>`;
         }
 
         function ss(inp) {
@@ -140,13 +138,13 @@
                 mc = `<div id="map-${i}" class="map-container"></div>`;
             }
 
-            jdiv.innerHTML = pangu.spacing(`
+            jdiv.innerHTML = `
     <hr><h3>方案 ${i}</h3>
     <p><strong>用时：</strong> ${fdur(j.tdur)} | <strong>换乘：</strong> ${xfrs}次</p>
     <p>${j.p[0].r.bs} ${fat(j.idt)} → ${j.p[j.p.length - 1].r.al} ${fat(j.aat)}</p>
     ${si}
     <h4>路径：</h4><ul>${pd}</ul>
-    ${mc}`);
+    ${mc}`;
             rd.appendChild(jdiv);
 
             if (document.getElementById('show_stations').checked && tstps && tstps.length > 0) {
@@ -206,7 +204,7 @@
         function fat(am) {
             if (am === null) return "N/A";
             const day = Math.floor(am / 1440), rem = am % 1440, h = Math.floor(rem / 60), m = rem % 60;
-            return `Day ${day + 1}, ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            return `第${day + 1}天 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
         function calx(p) {
@@ -262,7 +260,7 @@
                 if (k > i + 1) { ct = fat_v; i = k - 1; }
             }
             j.allStations = [...new Set(all_sns)];
-            return { pd: pangu.spacing(h), tstps };
+            return { pd: h, tstps };
         }
 
         function act() { if (run) stp_s(); else s_s(); }
@@ -414,8 +412,6 @@
                 radio.addEventListener('change', tmv);
             });
             tmv();
-
-            pangu.autoSpacingPage();
         });
         us('启动');
 
