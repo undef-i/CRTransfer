@@ -1,7 +1,7 @@
 TARGET_DIR = dist
 WASM_DIR = src/wasm
 DATA_DIR = data
-TEMPLATES_DIR = src/templates
+STATIC_DIR = src/static
 WASM_FILE_NAME = transit_bg.wasm
 
 .PHONY: build clean
@@ -17,8 +17,8 @@ build:
 	mkdir -p $(TARGET_DIR)/pkg
 	cp -r $(WASM_DIR)/pkg/* $(TARGET_DIR)/pkg/
 	
-	@echo "Copying templates..."
-	cp -r $(TEMPLATES_DIR)/* $(TARGET_DIR)/
+	@echo "Copying static..."
+	cp -r $(STATIC_DIR)/* $(TARGET_DIR)/
 	
 	@echo "Copying ndt.json"
 	cp $(DATA_DIR)/ndt.json $(TARGET_DIR)/

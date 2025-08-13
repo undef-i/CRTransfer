@@ -292,12 +292,28 @@ export function find_mx(o, d, mtt, esc_o, esc_d) {
     return ret;
 }
 
-function __wbg_adapter_20(arg0, arg1, arg2) {
-    wasm.closure51_externref_shim(arg0, arg1, arg2);
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @returns {Promise<void>}
+ */
+export function find_k(o, d, esc_o, esc_d) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d);
+    return ret;
 }
 
-function __wbg_adapter_47(arg0, arg1, arg2, arg3) {
-    wasm.closure73_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_20(arg0, arg1, arg2) {
+    wasm.closure55_externref_shim(arg0, arg1, arg2);
+}
+
+function __wbg_adapter_48(arg0, arg1, arg2, arg3) {
+    wasm.closure77_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 async function __wbg_load(module, imports) {
@@ -369,7 +385,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return __wbg_adapter_47(a, state0.b, arg0, arg1);
+                    return __wbg_adapter_48(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -439,8 +455,8 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper355 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 52, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper369 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 56, __wbg_adapter_20);
         return ret;
     };
     imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {

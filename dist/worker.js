@@ -5,7 +5,7 @@ async function init_w() {
     if (init_done) return true;
     try {
         if (!wm) {
-            const wimp = await import('./pkg/transit.js'); 
+            const wimp = await import('./pkg/transit.js');
             await wimp.default();
             wm = wimp;
             console.log('w module loaded');
@@ -46,12 +46,17 @@ self.onmessage = async function (e) {
             self.postMessage({ t: 'stat', d: '...' });
             await wm.find(o, d, mtt, esc_o, esc_d);
             self.postMessage({ t: 'done' });
-        } 
-        else if (t === 'start_mx') { 
+        }
+        else if (t === 'start_mx') {
             self.postMessage({ t: 'stat', d: '...' });
             await wm.find_mx(o, d, mtt, esc_o, esc_d);
             self.postMessage({ t: 'done' });
-        } 
+        }
+        else if (t === 'start_k') {
+            self.postMessage({ t: 'stat', d: '...' });
+            await wm.find_k(o, d, esc_o, esc_d);
+            self.postMessage({ t: 'done' });
+        }
         else if (t === 'init_only') {
             self.postMessage({ t: 'init_done' });
         } else if (t === 'get_stn') {

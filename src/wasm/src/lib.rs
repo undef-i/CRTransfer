@@ -37,6 +37,7 @@ pub struct R {
     pub al: usize,
     pub dtr: i32,
     pub dur: i32,
+    pub km: i32,
 }
 
 fn ser_sid<S>(sid: &usize, ser: S) -> Result<S::Ok, S::Error>
@@ -59,6 +60,7 @@ pub struct Jny {
     pub aat: i32,
     pub idt: i32,
     pub x: i32,
+    pub tkm: i32,
     pub p: Vec<PS>,
 }
 
@@ -105,6 +107,32 @@ impl PartialOrd for St {
 impl Ord for St {
     fn cmp(&self, o: &Self) -> Ordering {
         o.tdur.cmp(&self.tdur).then_with(|| self.idt.cmp(&o.idt))
+    }
+}
+
+#[derive(Debug, Clone)]
+struct StK {
+    tkm: i32,
+    sid: usize,
+    p: Option<Rc<StK>>,
+    r: Option<R>,
+}
+
+impl PartialEq for StK {
+    fn eq(&self, o: &Self) -> bool {
+        self.tkm == o.tkm
+    }
+}
+impl Eq for StK {}
+
+impl PartialOrd for StK {
+    fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for StK {
+    fn cmp(&self, o: &Self) -> Ordering {
+        o.tkm.cmp(&self.tkm)
     }
 }
 
@@ -189,6 +217,22 @@ fn mk_path(st: &St) -> Vec<PS> {
                 0
             };
             segs.push(PS { wtb, r: r.clone() });
+        }
+        cur = c.p.clone();
+    }
+    segs.reverse();
+    segs
+}
+
+fn mk_path_k(st: &StK) -> Vec<PS> {
+    let mut segs = Vec::new();
+    let mut cur = Some(Rc::new(st.clone()));
+    while let Some(c) = cur {
+        if let Some(ref r) = c.r {
+            segs.push(PS {
+                wtb: 0,
+                r: r.clone(),
+            });
         }
         cur = c.p.clone();
     }
@@ -362,6 +406,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
                 aat: c.aat,
                 idt: c.idt,
                 x: c.x,
+                tkm: 0,
                 p,
             };
             if let Ok(j) = serde_json::to_string(&jny) {
@@ -533,6 +578,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
                 aat: c.aat,
                 idt: c.idt,
                 x: c.x,
+                tkm: 0,
                 p,
             };
             if let Ok(j) = serde_json::to_string(&jny) {
@@ -599,5 +645,88 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
         }
     }
 
+    Ok(())
+}
+
+#[wasm_bindgen(js_name = find_k)]
+pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
+    rst_stop();
+    let rfs = DAT
+        .with(|dat| dat.borrow().as_ref().cloned())
+        .ok_or("dat not initd")?;
+    let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
+    let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
+
+    let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
+    let dset: HashSet<usize> = if esc_d {
+        g_sgrp(did).into_iter().collect()
+    } else {
+        [did].into_iter().collect()
+    };
+
+    let mut pq = BinaryHeap::with_capacity(50000);
+    let mut v: HashMap<usize, i32> = HashMap::with_capacity(5000);
+
+    for &osid in &osids {
+        if let Some(rs) = rfs.get(&osid) {
+            for r in rs {
+                pq.push(StK {
+                    tkm: r.km,
+                    sid: r.al,
+                    p: None,
+                    r: Some(r.clone()),
+                });
+            }
+        }
+    }
+
+    let mut i = 0;
+    while let Some(c) = pq.pop() {
+        i += 1;
+        if i % 10000 == 0 {
+            sleep(0).await?;
+        }
+        if is_stopped() {
+            break;
+        }
+
+        if let Some(&min_km) = v.get(&c.sid) {
+            if c.tkm >= min_km {
+                continue;
+            }
+        }
+        v.insert(c.sid, c.tkm);
+
+        if dset.contains(&c.sid) {
+            let p = mk_path_k(&c);
+            let jny = Jny {
+                tdur: 0,
+                aat: 0,
+                idt: 0,
+                x: p.len() as i32 - 1,
+                tkm: c.tkm,
+                p,
+            };
+            if let Ok(j) = serde_json::to_string(&jny) {
+                on_jny(&j);
+            }
+            continue;
+        }
+
+        if let Some(next_rs) = rfs.get(&c.sid) {
+            for next_r in next_rs {
+                if is_stopped() {
+                    break;
+                }
+                let new_tkm = c.tkm + next_r.km;
+                pq.push(StK {
+                    tkm: new_tkm,
+                    sid: next_r.al,
+                    p: Some(Rc::new(c.clone())),
+                    r: Some(next_r.clone()),
+                });
+            }
+        }
+    }
     Ok(())
 }

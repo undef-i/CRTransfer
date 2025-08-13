@@ -12,24 +12,30 @@ struct RawTrain {
     tn: String,
     s: Vec<RawStop>,
 }
+
 #[derive(Deserialize)]
 struct RawStop {
     n: String,
     a: i32,
     d: i32,
+    km: i32,
 }
+
 #[derive(Deserialize)]
 struct RawRdat {
     t: Vec<RawTrain>,
 }
+
 #[derive(Deserialize)]
 struct RawScGroup {
     s: Vec<RawScStation>,
 }
+
 #[derive(Deserialize)]
 struct RawScStation {
     n: String,
 }
+
 #[derive(Deserialize)]
 struct RawScdat {
     g: Vec<RawScGroup>,
@@ -48,6 +54,7 @@ struct R {
     al: usize,
     dtr: i32,
     dur: i32,
+    km: i32,
 }
 
 #[derive(Serialize)]
@@ -87,15 +94,18 @@ fn main() {
             let b = &train.s[i];
             let a = &train.s[i + 1];
             if b.d != -1 && a.a != -1 && a.a > b.d {
-                let b_sid = get_sid(&b.n, &mut s2i, &mut i2s);
-                let a_sid = get_sid(&a.n, &mut s2i, &mut i2s);
-                dat.entry(b_sid).or_default().push(R {
-                    tn: train.tn.clone(),
-                    bs: b_sid,
-                    al: a_sid,
-                    dtr: b.d,
-                    dur: a.a - b.d,
-                });
+                if a.km > b.km {
+                    let b_sid = get_sid(&b.n, &mut s2i, &mut i2s);
+                    let a_sid = get_sid(&a.n, &mut s2i, &mut i2s);
+                    dat.entry(b_sid).or_default().push(R {
+                        tn: train.tn.clone(),
+                        bs: b_sid,
+                        al: a_sid,
+                        dtr: b.d,
+                        dur: a.a - b.d,
+                        km: a.km - b.km,
+                    });
+                }
             }
         }
     }
