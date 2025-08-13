@@ -235,29 +235,30 @@
                 if (ps.wtb > 0 && i > 0 && r.tn !== j.p[i - 1].r.tn) {
                     h += `<li><strong>${r.bs} 换乘</strong> (${fdur(ps.wtb)})</li>`;
                 }
+
                 ct += ps.wtb;
                 const bts = fat(ct).slice(-5), ss = r.bs;
                 ct += r.dur;
-                let fs = r.al, fat_v = ct;
+                let fat_v = ct;
+
+                let fs = r.al;
+                let seg_km = r.km;
+
                 let k = i + 1;
                 while (k < j.p.length && j.p[k].r.tn === r.tn) {
                     const ns = j.p[k];
                     fat_v += ns.wtb + ns.r.dur;
                     fs = ns.r.al;
+                    seg_km += ns.r.km;
                     k++;
                 }
+
                 const fats = fat(fat_v).slice(-5);
                 const is_nd = isnd(r.tn);
                 const tstyle = is_nd ? ' style="color: red;"' : '';
-                
-                let details = '';
-                const km_info = `<span style="font-size: smaller; color: #888;"> (${r.km}公里)</span>`;
-                if (mode === 'km') {
-                    details = `${ss} → ${fs}${km_info}`;
-                } else {
-                    details = `${ss} ${bts} → ${fs} ${fats}${km_info}`;
-                }
 
+                const km_info = `<span style="font-size: smaller; color: #888;"> (${seg_km}公里)</span>`;
+                const details = mode === 'km' ? `${ss} → ${fs}${km_info}` : `${ss} ${bts} → ${fs} ${fats}${km_info}`;
 
                 if (document.getElementById('show_stations').checked) {
                     try {
@@ -278,7 +279,11 @@
                 } else {
                     h += `<li><strong${tstyle}>${r.tn}:</strong> ${details}</li>`;
                 }
-                if (k > i + 1) { ct = fat_v; i = k - 1; }
+
+                if (k > i + 1) {
+                    ct = fat_v;
+                    i = k - 1;
+                }
             }
             j.allStations = [...new Set(all_sns)];
             return { pd: h, tstps };
@@ -413,7 +418,7 @@
             w.onerror = function (err) { us(err.message); f_s(); };
             w.postMessage({ t: 'init_only' });
         }
-        
+
         document.getElementById('o').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
         document.getElementById('d').addEventListener('keypress', (e) => { if (e.key === 'Enter') act(); });
         document.getElementById('o').addEventListener('input', function () { ss(this); });
@@ -438,12 +443,6 @@
             uab();
             await lnd();
             iw();
-            
-            const im = document.querySelector('input[name="mode"]:checked').value;
-            const mc = document.getElementById('mtt_container');
-            if (im === 'km') {
-                mc.style.display = 'none';
-            }
         });
         us('启动');
 
