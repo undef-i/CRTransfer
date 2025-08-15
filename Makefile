@@ -4,9 +4,17 @@ DATA_DIR = data
 STATIC_DIR = src/static
 WASM_FILE_NAME = transit_bg.wasm
 
-.PHONY: build clean
+.PHONY: build clean sync
+
+sync:
+	@echo "Running sync tool..."
+	rm data/ndt.json
+	rm data/rdat.json
+	rm data/scdat.json
+	cd $(DATA_DIR) && ../src/sync/sync
 
 build:
+
 	@echo "Building WASM package with path remapping..."
 	(cd $(WASM_DIR) && RUSTFLAGS="--remap-path-prefix=$$HOME=~" wasm-pack build --target web --release)
 	
