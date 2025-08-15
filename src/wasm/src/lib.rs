@@ -389,7 +389,11 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
     }
 
     let mut i = 0;
+    let mut max_pq_size = 0;
+
     while let Some(c) = pq.pop() {
+        max_pq_size = max_pq_size.max(pq.len() + 1);
+        
         i += 1;
         if i % 10000 == 0 {
             sleep(0).await?;
@@ -474,6 +478,9 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
             }
         }
     }
+
+    web_sys::console::log_1(&format!("'max pq size: {}, max v size: {}", max_pq_size, v.len()).into());
+
     Ok(())
 }
 
@@ -664,7 +671,7 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool) -> Result<(), Js
         [did].into_iter().collect()
     };
 
-    let mut pq = BinaryHeap::with_capacity(50000);
+    let mut pq = BinaryHeap::with_capacity(4000000);
     let mut v: HashMap<usize, i32> = HashMap::with_capacity(5000);
 
     for &osid in &osids {
