@@ -203,6 +203,25 @@ function takeFromExternrefTable0(idx) {
     wasm.__externref_table_dealloc(idx);
     return value;
 }
+/**
+ * @param {string} tn
+ * @param {string} from
+ * @param {string} to
+ * @returns {any}
+ */
+export function gts(tn, from, to) {
+    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(from, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(to, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.gts(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
 
 export function init() {
     const ret = wasm.init();
@@ -211,8 +230,37 @@ export function init() {
     }
 }
 
-export function stop() {
-    wasm.stop();
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @returns {Promise<void>}
+ */
+export function find_k(o, d, esc_o, esc_d) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d);
+    return ret;
+}
+
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {number} mtt
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @returns {Promise<void>}
+ */
+export function find(o, d, mtt, esc_o, esc_d) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.find(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
+    return ret;
 }
 
 function getArrayJsValueFromWasm0(ptr, len) {
@@ -239,43 +287,6 @@ export function g_stns() {
 }
 
 /**
- * @param {string} tn
- * @param {string} from
- * @param {string} to
- * @returns {any}
- */
-export function gts(tn, from, to) {
-    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(from, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(to, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.gts(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
-/**
- * @param {string} o
- * @param {string} d
- * @param {number} mtt
- * @param {boolean} esc_o
- * @param {boolean} esc_d
- * @returns {Promise<void>}
- */
-export function find(o, d, mtt, esc_o, esc_d) {
-    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
-    return ret;
-}
-
-/**
  * @param {string} o
  * @param {string} d
  * @param {number} mtt
@@ -292,28 +303,16 @@ export function find_mx(o, d, mtt, esc_o, esc_d) {
     return ret;
 }
 
-/**
- * @param {string} o
- * @param {string} d
- * @param {boolean} esc_o
- * @param {boolean} esc_d
- * @returns {Promise<void>}
- */
-export function find_k(o, d, esc_o, esc_d) {
-    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d);
-    return ret;
+export function stop() {
+    wasm.stop();
 }
 
 function __wbg_adapter_20(arg0, arg1, arg2) {
-    wasm.closure55_externref_shim(arg0, arg1, arg2);
+    wasm.closure48_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_50(arg0, arg1, arg2, arg3) {
-    wasm.closure77_externref_shim(arg0, arg1, arg2, arg3);
+    wasm.closure73_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 async function __wbg_load(module, imports) {
@@ -458,8 +457,8 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper398 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 56, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper399 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 49, __wbg_adapter_20);
         return ret;
     };
     imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {
