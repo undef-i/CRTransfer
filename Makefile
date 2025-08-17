@@ -23,6 +23,9 @@ build:
 	@echo "Copying ndt.json"
 	cp $(DATA_DIR)/ndt.json $(TARGET_DIR)/
 
+	@echo "Copying version..."
+	cp $(DATA_DIR)/version $(TARGET_DIR)/
+
 	@echo "Stripping WASM file..."
 	wasm-strip $(TARGET_DIR)/pkg/$(WASM_FILE_NAME)
 	
