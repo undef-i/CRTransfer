@@ -1,0 +1,102 @@
+name: Daily Data Sync
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        cd src/sync
+
+    - name: Run sync script
+      id: sync
+      run: |
+        cd src/sync
+        
+        CURRENT_VERSION=""
+        if [ -f "../../data/version" ]; then
+          CURRENT_VERSION=$(cat ../../data/version | tr -d '\n')
+        fi
+        
+        echo "Current version: $CURRENT_VERSION"
+        
+        NEW_VERSION=$(echo "${{ secrets.SYNC_PASSWORD }}" | ./sync)
+        echo "New version: $NEW_VERSION"
+        
+        NEW_VERSION=$(echo "$NEW_VERSION" | tr -d '\n' | xargs)
+        
+        FILES_GENERATED=false
+        if [ -f "rdat.json" ] || [ -f "scdat.json" ] || [ -f "ndt.json" ]; then
+          FILES_GENERATED=true
+        fi
+        
+        SHOULD_UPDATE=false
+        if [ -z "$NEW_VERSION" ]; then
+          echo "Version is empty, skipping update"
+        elif [ -z "$CURRENT_VERSION" ]; then
+          echo "Current version is empty, updating"
+          SHOULD_UPDATE=true
+        elif [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+          echo "Version changed, updating"
+          SHOULD_UPDATE=true
+        else
+          echo "Version unchanged, skipping update"
+        fi
+        
+        echo "should_update=$SHOULD_UPDATE" >> $GITHUB_OUTPUT
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "files_generated=$FILES_GENERATED" >> $GITHUB_OUTPUT
+        
+        if [ "$SHOULD_UPDATE" != "true" ]; then
+          rm -f rdat.json scdat.json ndt.json
+        fi
+
+    - name: Update data files
+      if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
+      run: |
+        if [ -f "src/sync/rdat.json" ]; then
+          cp src/sync/rdat.json data/rdat.json
+        fi
+        
+        if [ -f "src/sync/scdat.json" ]; then
+          cp src/sync/scdat.json data/scdat.json
+        fi
+        
+        if [ -f "src/sync/ndt.json" ]; then
+          cp src/sync/ndt.json data/ndt.json
+        fi
+        
+        echo "${{ steps.sync.outputs.new_version }}" > data/version
+        
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        git add data/rdat.json data/scdat.json data/ndt.json data/version
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: update data"
+          git push
+        fi
+
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -f src/sync/rdat.json src/sync/scdat.json src/sync/ndt.json || true
