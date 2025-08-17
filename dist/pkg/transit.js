@@ -15,6 +15,8 @@ function handleError(f, args) {
     }
 }
 
+function getFromExternrefTable0(idx) { return wasm.__wbindgen_export_2.get(idx); }
+
 const cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : { decode: () => { throw Error('TextDecoder not available') } } );
 
 if (typeof TextDecoder !== 'undefined') { cachedTextDecoder.decode(); };
@@ -31,6 +33,14 @@ function getUint8ArrayMemory0() {
 function getStringFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+
+function getCachedStringFromWasm0(ptr, len) {
+    if (ptr === 0) {
+        return getFromExternrefTable0(len);
+    } else {
+        return getStringFromWasm0(ptr, len);
+    }
 }
 
 function isLikeNone(x) {
@@ -223,13 +233,6 @@ export function gts(tn, from, to) {
     return takeFromExternrefTable0(ret[0]);
 }
 
-export function init() {
-    const ret = wasm.init();
-    if (ret[1]) {
-        throw takeFromExternrefTable0(ret[0]);
-    }
-}
-
 /**
  * @param {string} o
  * @param {string} d
@@ -244,6 +247,27 @@ export function find_k(o, d, esc_o, esc_d) {
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d);
     return ret;
+}
+
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {number} mtt
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @returns {Promise<void>}
+ */
+export function find_mx(o, d, mtt, esc_o, esc_d) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.find_mx(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
+    return ret;
+}
+
+export function stop() {
+    wasm.stop();
 }
 
 /**
@@ -286,33 +310,19 @@ export function g_stns() {
     return v1;
 }
 
-/**
- * @param {string} o
- * @param {string} d
- * @param {number} mtt
- * @param {boolean} esc_o
- * @param {boolean} esc_d
- * @returns {Promise<void>}
- */
-export function find_mx(o, d, mtt, esc_o, esc_d) {
-    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find_mx(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
-    return ret;
-}
-
-export function stop() {
-    wasm.stop();
+export function init() {
+    const ret = wasm.init();
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
 function __wbg_adapter_20(arg0, arg1, arg2) {
-    wasm.closure48_externref_shim(arg0, arg1, arg2);
+    wasm.closure47_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_50(arg0, arg1, arg2, arg3) {
-    wasm.closure73_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_44(arg0, arg1, arg2, arg3) {
+    wasm.closure34_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 async function __wbg_load(module, imports) {
@@ -387,7 +397,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return __wbg_adapter_50(a, state0.b, arg0, arg1);
+                    return __wbg_adapter_44(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -399,11 +409,13 @@ function __wbg_get_imports() {
         }
     };
     imports.wbg.__wbg_newnoargs_105ed471475aaf50 = function(arg0, arg1) {
-        const ret = new Function(getStringFromWasm0(arg0, arg1));
+        var v0 = getCachedStringFromWasm0(arg0, arg1);
+        const ret = new Function(v0);
         return ret;
     };
     imports.wbg.__wbg_onjny_fd5dc269651b9cc2 = function(arg0, arg1) {
-        on_jny(getStringFromWasm0(arg0, arg1));
+        var v0 = getCachedStringFromWasm0(arg0, arg1);
+        on_jny(v0);
     };
     imports.wbg.__wbg_queueMicrotask_97d92b4fcc8a61c5 = function(arg0) {
         queueMicrotask(arg0);
@@ -457,8 +469,8 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper399 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 49, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper856 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 48, __wbg_adapter_20);
         return ret;
     };
     imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {

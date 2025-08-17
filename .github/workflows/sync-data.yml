@@ -16,17 +16,26 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@master
       with:
+        toolchain: nightly-2025-08-16
         targets: wasm32-unknown-unknown
 
     - name: Install wasm-pack
       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-    - name: Install binaryen
+    - name: Install latest binaryen
       run: |
         sudo apt-get update
-        sudo apt-get install -y binaryen
+        sudo apt-get install -y wget
+        wget https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz
+        tar -xzf binaryen-version_116-x86_64-linux.tar.gz
+        sudo mv binaryen-version_116/bin/wasm-opt /usr/local/bin/
+        sudo chmod +x /usr/local/bin/wasm-opt
+    - name: Check tool versions
+      run: |
+        rustc --version
+        wasm-pack --version
+        wasm-opt --version
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
