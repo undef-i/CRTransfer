@@ -27,7 +27,13 @@ build:
 	cp $(DATA_DIR)/version $(TARGET_DIR)/
 
 	@echo "Stripping WASM file..."
-	wasm-strip $(TARGET_DIR)/pkg/$(WASM_FILE_NAME)
+	@if command -v wasm-opt >/dev/null 2>&1; then \
+		wasm-opt --strip-debug $(TARGET_DIR)/pkg/$(WASM_FILE_NAME) -o $(TARGET_DIR)/pkg/$(WASM_FILE_NAME); \
+	elif command -v wasm-strip >/dev/null 2>&1; then \
+		wasm-strip $(TARGET_DIR)/pkg/$(WASM_FILE_NAME); \
+	else \
+		echo "Warning: wasm-opt/wasm-strip not found, skipping WASM optimization"; \
+	fi
 	
 	@echo "Build completed successfully!"
 
