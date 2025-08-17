@@ -1,24 +1,24 @@
 /* tslint:disable */
 /* eslint-disable */
-export function gts(tn: string, from: string, to: string): any;
-export function find_k(o: string, d: string, esc_o: boolean, esc_d: boolean): Promise<void>;
-export function find_mx(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): Promise<void>;
 export function stop(): void;
-export function find(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): Promise<void>;
 export function g_stns(): string[];
+export function gts(tn: string, from: string, to: string): any;
+export function find_mx(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): Promise<void>;
+export function find(o: string, d: string, mtt: number, esc_o: boolean, esc_d: boolean): Promise<void>;
 export function init(): void;
+export function find_k(o: string, d: string, esc_o: boolean, esc_d: boolean): Promise<void>;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly find_k: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
+  readonly gts: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+  readonly init: () => [number, number];
   readonly find_mx: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => any;
-  readonly g_stns: () => [number, number, number, number];
   readonly find: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => any;
   readonly stop: () => void;
-  readonly init: () => [number, number];
-  readonly gts: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
-  readonly find_k: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
+  readonly g_stns: () => [number, number, number, number];
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
@@ -29,7 +29,7 @@ export interface InitOutput {
   readonly __externref_drop_slice: (a: number, b: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly closure47_externref_shim: (a: number, b: number, c: any) => void;
-  readonly closure34_externref_shim: (a: number, b: number, c: any, d: any) => void;
+  readonly closure33_externref_shim: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_start: () => void;
 }
 
