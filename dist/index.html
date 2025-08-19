@@ -50,8 +50,7 @@
 <body>
 
     <h1>换乘查询 <span id="udt" style="font-size: 14px;"></span></h1>
-    <p>鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。途径站点位置信息有部分错漏，仅供辅助参考。<span
-            style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。
+    <p>鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。途径站点位置信息有部分错漏，仅供辅助参考。<span style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。
     </p>
     <div>
         起点：<input type="text" id="o" value="" autocomplete="off"><label><input type="checkbox" id="esc_o"
@@ -71,9 +70,9 @@
         </span>
         <label><input type="checkbox" id="show_stations"> 显示途径站点</label>
         <br>
-            <div id="pbar_container" style="visibility: hidden;">
-        <progress id="pbar" value="0" style="width: 100%; vertical-align: middle;"></progress>
-    </div>
+        <div id="pbar_container" style="visibility: hidden;">
+            <progress id="pbar" value="0" style="width: 100%; vertical-align: middle;"></progress>
+        </div>
         <button id="ab">搜索</button>
     </div>
     <div id="st"></div>
@@ -110,7 +109,10 @@
             document.getElementById('suggestions').innerHTML = ms.map(s => `<a href="#" onmousedown="sels('${s}'); return false;">${s}</a>`).join(' | ');
         }
 
-        function hs() { document.getElementById('suggestions').innerHTML = '&nbsp;'; }
+        function hs(e) {
+            if (e && (e.target.id === 'o' || e.target.id === 'd')) { return; }
+            document.getElementById('suggestions').innerHTML = '&nbsp;';
+        }
 
         function sels(s) {
             if (cin) { cin.value = s; }
@@ -441,7 +443,7 @@
         document.body.addEventListener('click', hs, true);
 
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
-            radio.addEventListener('change', function() {
+            radio.addEventListener('change', function () {
                 const mc = document.getElementById('mtt_container');
                 if (this.value === 'km') {
                     mc.style.display = 'none';
@@ -458,7 +460,7 @@
                 if (v.length === 8) {
                     document.getElementById('udt').textContent = v;
                 }
-            } catch {}
+            } catch { }
         }
 
         window.addEventListener('load', async () => {
