@@ -5,8 +5,36 @@ async function init_w() {
     if (init_done) return true;
     try {
         if (!wm) {
+            self.postMessage({ t: 'pgr_start' });
+
+            const resp = await fetch('./pkg/transit_bg.wasm');
+            if (!resp.ok) throw new Error(`WASM fetch failed: ${resp.statusText}`);
+
+            const tot = +resp.headers.get('Content-Length');
+            const rdr = resp.body.getReader();
+
+            let ld = 0;
+            const cks = [];
+
+            while (true) {
+                const { done, value } = await rdr.read();
+                if (done) break;
+                cks.push(value);
+                ld += value.length;
+                if (tot) {
+                    self.postMessage({ t: 'pgr_upd', d: { ld, tt: tot } });
+                }
+            }
+
+            const wbuf = new Uint8Array(ld);
+            let pos = 0;
+            for (const ck of cks) {
+                wbuf.set(ck, pos);
+                pos += ck.length;
+            }
+
             const wimp = await import('./pkg/transit.js');
-            await wimp.default();
+            await wimp.default(wbuf.buffer);
             wm = wimp;
             console.log('w module loaded');
         }
@@ -20,6 +48,7 @@ async function init_w() {
         return false;
     }
 }
+
 
 self.on_jny = function (jstr) {
     try {

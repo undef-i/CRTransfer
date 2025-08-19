@@ -48,6 +48,7 @@
 </head>
 
 <body>
+
     <h1>换乘查询 <span id="udt" style="font-size: 14px;"></span></h1>
     <p>鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。途径站点位置信息有部分错漏，仅供辅助参考。<span
             style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。
@@ -69,7 +70,10 @@
             <br>
         </span>
         <label><input type="checkbox" id="show_stations"> 显示途径站点</label>
-        <br><br>
+        <br>
+            <div id="pbar_container" style="visibility: hidden;">
+        <progress id="pbar" value="0" style="width: 100%; vertical-align: middle;"></progress>
+    </div>
         <button id="ab">搜索</button>
     </div>
     <div id="st"></div>
@@ -138,7 +142,7 @@
                 summary = `<p><strong>总里程：</strong> ${j.tkm}公里 | <strong>换乘：</strong> ${xfrs}次</p>`;
             } else {
                 summary = `<p><strong>用时：</strong> ${fdur(j.tdur)} | <strong>换乘：</strong> ${xfrs}次</p>
-                           <p>${j.p[0].r.bs} ${fat(j.idt)} → ${j.p[j.p.length - 1].r.al} ${fat(j.aat)}</p>`;
+                               <p>${j.p[0].r.bs} ${fat(j.idt)} → ${j.p[j.p.length - 1].r.al} ${fat(j.aat)}</p>`;
             }
 
 
@@ -375,6 +379,14 @@
             w.onmessage = function (e) {
                 const { t, d, requestId } = e.data;
                 switch (t) {
+                    case 'pgr_start':
+                        document.getElementById('pbar_container').style.visibility = 'visible';
+                        break;
+                    case 'pgr_upd':
+                        const pbar = document.getElementById('pbar');
+                        pbar.value = d.ld;
+                        pbar.max = d.tt;
+                        break;
                     case 'j_fnd':
                         jc++;
                         jbuf.push(d);
@@ -398,6 +410,7 @@
                         us(d);
                         break;
                     case 'init_done':
+                        document.getElementById('pbar_container').style.visibility = 'hidden';
                         rdy = true;
                         us('就绪');
                         uab();
