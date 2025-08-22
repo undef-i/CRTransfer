@@ -1,0 +1,18 @@
+{
+  "name": "crtransfer",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node build.js && vite",
+    "build": "node build.js",
+    "preview": "vite preview",
+    "wasm": "cd src/wasm && wasm-pack build --target web --release",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}

@@ -45,7 +45,6 @@ jobs:
     - name: Install dependencies
       run: |
         cd src/sync
-        # 如果有package.json就安装依赖
         if [ -f package.json ]; then
           npm install
         fi
@@ -114,9 +113,13 @@ jobs:
         
         echo "${{ steps.sync.outputs.new_version }}" > data/version
         
+    - name: Install Node.js dependencies
+      if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
+      run: npm install
+
     - name: Build project
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
-      run: make build
+      run: npm run build
         
     - name: Commit and push changes
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
