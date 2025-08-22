@@ -21,7 +21,16 @@ export default defineConfig({
   base: './',
   worker: {
     format: 'es',
+    rollupOptions: {
+      output: {
+        format: 'es'
+      }
+    }
   },
-  // 确保WASM文件被正确处理
   assetsInclude: ['**/*.wasm'],
+  resolve: {
+    alias: {
+      './wasm/pkg': resolve(__dirname, 'src/wasm/pkg'),
+    },
+  },
 });

@@ -298,7 +298,7 @@ function iw() {
     if (w) return;
     us('加载');
     uab();
-    w = new Worker(new URL('./worker.js', import.meta.url));
+    w = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
     w.onmessage = function (e) {
         const { t, d, requestId } = e.data;
         switch (t) {
@@ -376,7 +376,7 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
 
 async function ldu() {
     try {
-        const rsp = await fetch('data/version');
+        const rsp = await fetch('version');
         const v = (await rsp.text()).trim();
         if (v.length === 8) {
             document.getElementById('udt').textContent = v;

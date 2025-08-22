@@ -7,7 +7,7 @@ async function init_w() {
         if (!wm) {
             self.postMessage({ t: 'pgr_start' });
 
-            const resp = await fetch('./wasm/pkg/transit_bg.wasm');
+            const resp = await fetch(new URL('./wasm/pkg/transit_bg.wasm', import.meta.url));
             if (!resp.ok) throw new Error(`WASM fetch failed: ${resp.statusText}`);
 
             const tot = +resp.headers.get('Content-Length');
@@ -33,14 +33,13 @@ async function init_w() {
                 pos += ck.length;
             }
 
-            import('./wasm/pkg/transit.js').then(async (wimp) => {
-                await wimp.default(wbuf.buffer);
-                wm = wimp;
-                console.log('w module loaded');
-                wm.init();
-                init_done = true;
-                console.log('w data initialized');
-            });
+            const wimp = await import(new URL('./wasm/pkg/transit.js', import.meta.url));
+            await wimp.default(wbuf.buffer);
+            wm = wimp;
+            console.log('w module loaded');
+            wm.init();
+            init_done = true;
+            console.log('w data initialized');
         }
         return true;
     } catch (err) {
@@ -71,7 +70,6 @@ self.onmessage = async function (e) {
             return;
         }
 
-        // Wait for wasm module to be ready
         while (!wm) {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
