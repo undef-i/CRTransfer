@@ -45,46 +45,12 @@
             }
         }
     </style>
-  <script type="module" crossorigin src="./assets/index-tfjfZQKx.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CRcoXEIV.css">
+  <script type="module" crossorigin src="./assets/index-CdCFdu2U.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-vL-yjx_W.css">
 </head>
 
 <body>
-
-    <h1>换乘查询 <span id="udt" style="font-size: 14px;"></span></h1>
-    <p>鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。途径站点位置信息有部分错漏，仅供辅助参考。<span style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。
-    </p>
-    <div>
-        起点：<input type="text" id="o" value="" autocomplete="off"><label><input type="checkbox" id="esc_o"
-                checked>同城站</label><br>
-        终点：<input type="text" id="d" value="" autocomplete="off"><label><input type="checkbox" id="esc_d"
-                checked>同城站</label>
-        <br>
-        <div id="suggestions">&nbsp;</div>
-        <label><input type="radio" name="mode" value="time" checked> 最短时间</label>
-        <label><input type="radio" name="mode" value="xfer"> 最少换乘</label>
-        <label><input type="radio" name="mode" value="km"> 最短里程</label>
-        <br>
-        <span id="mtt_container">
-            <label>换乘时间：</label>
-            <input type="number" id="mtt" value="0"> 分钟
-            <br>
-        </span>
-        <label><input type="checkbox" id="show_stations"> 显示途径站点</label>
-        <br>
-        <div id="pbar_container" style="visibility: hidden;">
-            <progress id="pbar" value="0" style="width: 100%; vertical-align: middle;"></progress>
-        </div>
-        <button id="ab">搜索</button>
-    </div>
-    <div id="st"></div>
-    <div id="rs"></div>
-
-    <hr>
-    <p>
-        © 2025 noxylva. Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">AGPLv3</a> |
-        <a href="https://github.com/undef-i/CRTransfer" target="_blank">GitHub</a>
-    </p>
+    <div id="app"></div>
 </body>
 
 </html>
