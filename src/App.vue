@@ -13,9 +13,14 @@
                 <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
                   >铁路换乘查询</n-h1
                 >
-                <n-text depth="3" style="font-size: 10px"
-                  >v{{ version }}</n-text
-                >
+                <n-text depth="3" style="font-size: 10px">
+                  <a
+                    href="/vanilla/"
+                    target="_blank"
+                    style="color: #2ea043; text-decoration: none"
+                    >旧版</a
+                  >
+                </n-text>
               </n-space>
               <n-space align="center" :size="16">
                 <n-text depth="3" style="font-size: 12px">
@@ -52,12 +57,19 @@
               "
             >
               <n-space align="center" :size="8">
-                <n-icon size="24" color="#18a058"><train-outline /></n-icon>
+                <n-icon size="24" color="#18a058"><TrainOutline /></n-icon>
                 <n-h1 style="margin: 0; font-size: 18px; font-weight: 600"
                   >铁路换乘查询</n-h1
                 >
               </n-space>
-              <n-text depth="3" style="font-size: 10px">v{{ version }}</n-text>
+              <n-text depth="3" style="font-size: 10px">
+                <a
+                  href="/vanilla/"
+                  target="_blank"
+                  style="color: #2ea043; text-decoration: none"
+                  >旧版</a
+                >
+              </n-text>
             </div>
             <div
               style="
@@ -95,6 +107,11 @@
         style="padding: 24px; max-width: 600px; margin: 0 auto; width: 100%"
       >
         <n-space vertical :size="24">
+          <n-alert type="warning" :show-icon="true">
+            站点位置信息来源网络，目前有较多错漏，仅供辅助参考。数据有效期至
+            {{ version.slice(0, 4) }} 年 {{ version.slice(4, 6) }} 月
+            {{ version.slice(6, 8) }} 日。
+          </n-alert>
           <n-card title="" hoverable style="box-shadow: none">
             <n-space vertical :size="20">
               <n-button-group class="full-width-responsive-group">
@@ -522,6 +539,25 @@ const formatArrivalTime = (am) => {
     .toString()
     .padStart(2, "0")}`;
 };
+
+const formatTrainNumber = (trainNumber) => {
+  if (!trainNumber) return trainNumber;
+
+  if (trainNumber.includes("/")) {
+    const parts = trainNumber.split("/");
+    const formattedParts = parts.map((part) => {
+      return part.replace(/[A-Za-z]$/, "");
+    });
+
+    if (formattedParts[0] === formattedParts[1]) {
+      return formattedParts[0];
+    } else {
+      return formattedParts.join("/");
+    }
+  } else {
+    return trainNumber.replace(/[A-Za-z]$/, "");
+  }
+};
 const calculateTransfers = (journey) => {
   const raw = rawJourneyBuffer.get(journey.id);
   if (!raw || !raw.p || raw.p.length <= 1) return 0;
@@ -561,7 +597,7 @@ const processJourney = (journey) => {
     }
     segments.push({
       type: "success",
-      train: leg.r.tn,
+      train: formatTrainNumber(leg.r.tn),
       from: leg.r.bs,
       to: finalStation,
       details:
@@ -828,5 +864,4 @@ watch([mode, mtt, escOrigin, escDestination], () => {
 </script>
 
 <style>
-
 </style>

@@ -8,19 +8,12 @@ on:
 jobs:
   sync-data:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
-    strategy:
-      matrix:
-        branch: [main, vanilla]
-
+    
     steps:
-    - name: Checkout ${{ matrix.branch }} branch
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ matrix.branch }}
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Rust toolchain
       uses: dtolnay/rust-toolchain@master
@@ -30,7 +23,6 @@ jobs:
 
     - name: Install wasm-pack
       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      
     - name: Install latest binaryen
       run: |
         sudo apt-get update
@@ -39,7 +31,6 @@ jobs:
         tar -xzf binaryen-version_116-x86_64-linux.tar.gz
         sudo mv binaryen-version_116/bin/wasm-opt /usr/local/bin/
         sudo chmod +x /usr/local/bin/wasm-opt
-        
     - name: Check tool versions
       run: |
         rustc --version
@@ -124,14 +115,12 @@ jobs:
         
     - name: Install Node.js dependencies
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
-      run: |
-        rm -rf node_modules package-lock.json
-        npm install --platform=linux --arch=x64
+      run: npm install
 
     - name: Build project
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
       run: npm run build
-      
+        
     - name: Commit and push changes
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
       run: |
