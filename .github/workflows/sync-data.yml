@@ -8,12 +8,19 @@ on:
 jobs:
   sync-data:
     runs-on: ubuntu-latest
-    
+
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        branch: [main, vanilla]
+
     steps:
-    - name: Checkout repository
+    - name: 检出 ${{ matrix.branch }} 分支
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        ref: ${{ matrix.branch }}
 
     - name: Set up Rust toolchain
       uses: dtolnay/rust-toolchain@master
@@ -23,6 +30,7 @@ jobs:
 
     - name: Install wasm-pack
       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      
     - name: Install latest binaryen
       run: |
         sudo apt-get update
@@ -31,6 +39,7 @@ jobs:
         tar -xzf binaryen-version_116-x86_64-linux.tar.gz
         sudo mv binaryen-version_116/bin/wasm-opt /usr/local/bin/
         sudo chmod +x /usr/local/bin/wasm-opt
+        
     - name: Check tool versions
       run: |
         rustc --version
@@ -120,7 +129,7 @@ jobs:
     - name: Build project
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
       run: npm run build
-        
+      
     - name: Commit and push changes
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
       run: |
