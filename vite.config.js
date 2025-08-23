@@ -11,6 +11,10 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'esnext',
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'src/index.html'),
+        vanilla: resolve(__dirname, 'src/vanilla/index.html'),
+      },
       output: {
         format: 'es',
       },

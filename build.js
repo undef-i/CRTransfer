@@ -1,4 +1,6 @@
 import { execSync } from 'child_process';
+import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { resolve } from 'path';
 
 console.log('Building CRTransfer with Vite...');
 
@@ -12,7 +14,7 @@ try {
 
 console.log('WASM files ready in src/wasm/pkg');
 
-console.log('Building Vite...');
+console.log('Building Vite (multi-page)...');
 try {
   execSync('vite build --mode production', { stdio: 'inherit', cwd: process.cwd() });
 } catch (error) {
