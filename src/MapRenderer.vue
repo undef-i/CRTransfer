@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { NSpin, NText } from 'naive-ui';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -25,6 +25,31 @@ const loading = ref(true);
 let mapInstance = null;
 let resizeObserver = null;
 
+const isDark = ref(true);
+
+const updateThemeFromStorage = () => {
+  const savedTheme = localStorage.getItem("theme");
+  isDark.value = savedTheme === "dark";
+};
+
+const getThemeColors = () => {
+  return isDark.value 
+    ? {
+        polylineColor: '#2ea043',
+        markerColor: '#e6edf3',
+        markerFillColor: '#161b22',
+        containerBg: '#30363d',
+        tileLayer: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      }
+    : {
+        polylineColor: '#1a7f37',
+        markerColor: '#24292f',
+        markerFillColor: '#ffffff',
+        containerBg: '#f6f8fa',
+        tileLayer: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      };
+};
+
 const initializeMap = (element) => {
   if (!element || mapInstance) return;
 
@@ -34,20 +59,25 @@ const initializeMap = (element) => {
     return;
   }
 
+  const colors = getThemeColors();
+
   mapInstance = L.map(element).setView([35.8617, 104.1954], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer(colors.tileLayer, {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(mapInstance);
 
   const latLngs = validStops.map(s => [s.lat, s.lon]);
-  const polyline = L.polyline(latLngs, { color: '#2ea043', weight: 4 }).addTo(mapInstance);
+  const polyline = L.polyline(latLngs, { 
+    color: colors.polylineColor, 
+    weight: 4 
+  }).addTo(mapInstance);
   mapInstance.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
   validStops.forEach(s => {
     L.circleMarker([s.lat, s.lon], {
       radius: 4,
-      color: '#e6edf3',
-      fillColor: '#161b22',
+      color: colors.markerColor,
+      fillColor: colors.markerFillColor,
       weight: 2,
       fillOpacity: 1
     }).addTo(mapInstance).bindPopup(s.n);
@@ -56,7 +86,30 @@ const initializeMap = (element) => {
   loading.value = false;
 };
 
+const updateMapTheme = () => {
+  if (!mapInstance || !mapContainerRef.value) return;
+  
+  const colors = getThemeColors();
+  
+  mapContainerRef.value.style.backgroundColor = colors.containerBg;
+  
+  if (mapInstance) {
+    mapInstance.remove();
+    mapInstance = null;
+  }
+  initializeMap(mapContainerRef.value);
+};
+
+const handleThemeChange = () => {
+  updateThemeFromStorage();
+  updateMapTheme();
+};
+
 onMounted(() => {
+  updateThemeFromStorage();
+  
+  window.addEventListener('storage', handleThemeChange);
+  
   if (mapContainerRef.value) {
     resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
@@ -73,6 +126,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('storage', handleThemeChange);
   if (resizeObserver) {
     resizeObserver.disconnect();
   }
@@ -80,6 +134,16 @@ onUnmounted(() => {
     mapInstance.remove();
   }
 });
+
+watch(() => props.stops, () => {
+  if (mapInstance) {
+    mapInstance.remove();
+    mapInstance = null;
+  }
+  if (mapContainerRef.value) {
+    initializeMap(mapContainerRef.value);
+  }
+}, { deep: true });
 </script>
 
 <style scoped>
@@ -89,7 +153,7 @@ onUnmounted(() => {
   width: 100%;
   border-radius: 6px;
   margin-top: 12px;
-  background-color: #30363d;
+  background-color: var(--map-bg, #30363d);
   overflow: hidden;
 }
 .map-overlay {

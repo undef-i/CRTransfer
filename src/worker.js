@@ -7,7 +7,11 @@ async function init_w() {
         if (!wm) {
             self.postMessage({ t: 'pgr_start' });
 
-            const resp = await fetch(new URL('./wasm/pkg/transit_bg.wasm', import.meta.url));
+            const resp = await fetch(new URL('./wasm/pkg/transit_bg.wasm', import.meta.url), {
+                headers: {
+                    'Accept-Encoding': 'br, gzip, deflate'
+                }
+            });
             if (!resp.ok) throw new Error(`WASM fetch failed: ${resp.statusText}`);
 
             const tot = +resp.headers.get('Content-Length');

@@ -1,21 +1,71 @@
 <template>
   <n-config-provider
-    :theme="darkTheme"
-    :theme-overrides="themeOverrides"
+    :theme="currentTheme"
+    :theme-overrides="currentThemeOverrides"
     style="height: 100%"
   >
     <n-layout style="min-height: 100vh">
       <n-layout-header bordered style="padding: 12px 0">
-        <div style="max-width: 600px; margin: 0 auto; padding: 0 24px;">
-          <n-space justify="space-between" align="center">
-            <n-space align="center" :size="12">
-              <n-icon size="28" color="#18a058"><train-outline /></n-icon>
-              <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
-                >铁路换乘查询</n-h1
-              >
-              <n-text depth="3" style="font-size: 10px">v{{ version }}</n-text>
+        <div style="max-width: 600px; margin: 0 auto; padding: 0 24px">
+          <div class="header-desktop">
+            <n-space justify="space-between" align="center">
+              <n-space align="center" :size="12">
+                <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
+                  >铁路换乘查询</n-h1
+                >
+                <n-text depth="3" style="font-size: 10px"
+                  >v{{ version }}</n-text
+                >
+              </n-space>
+              <n-space align="center" :size="16">
+                <n-text depth="3" style="font-size: 12px">
+                  © 2025 noxylva.
+                  <a
+                    href="https://github.com/undef-i/CRTransfer"
+                    target="_blank"
+                    style="color: #2ea043; text-decoration: none"
+                    >GitHub</a
+                  >
+                </n-text>
+                <n-button
+                  size="small"
+                  @click="toggleTheme"
+                  :title="isDark ? '切换到亮色主题' : '切换到暗色主题'"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <component :is="isDark ? SunnyOutline : MoonOutline" />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </n-space>
             </n-space>
-            <n-space align="center" :size="16">
+          </div>
+
+          <div class="header-mobile">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <n-space align="center" :size="8">
+                <n-icon size="24" color="#18a058"><train-outline /></n-icon>
+                <n-h1 style="margin: 0; font-size: 18px; font-weight: 600"
+                  >铁路换乘查询</n-h1
+                >
+              </n-space>
+              <n-text depth="3" style="font-size: 10px">v{{ version }}</n-text>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
               <n-text depth="3" style="font-size: 12px">
                 © 2025 noxylva.
                 <a
@@ -25,8 +75,19 @@
                   >GitHub</a
                 >
               </n-text>
-            </n-space>
-          </n-space>
+              <n-button
+                size="small"
+                @click="toggleTheme"
+                :title="isDark ? '切换到亮色主题' : '切换到暗色主题'"
+              >
+                <template #icon>
+                  <n-icon>
+                    <component :is="isDark ? SunnyOutline : MoonOutline" />
+                  </n-icon>
+                </template>
+              </n-button>
+            </div>
+          </div>
         </div>
       </n-layout-header>
 
@@ -34,7 +95,7 @@
         style="padding: 24px; max-width: 600px; margin: 0 auto; width: 100%"
       >
         <n-space vertical :size="24">
-          <n-card title="" hoverable>
+          <n-card title="" hoverable style="box-shadow: none">
             <n-space vertical :size="20">
               <n-button-group class="full-width-responsive-group">
                 <n-button
@@ -117,7 +178,7 @@
                       v-model:value="mtt"
                       :min="0"
                       :show-button="false"
-                      placeholder="0"
+                      placeholder="任意"
                       style="text-align: center; min-width: 80px"
                     />
                     <n-input-group-label>分钟</n-input-group-label>
@@ -153,7 +214,7 @@
             v-if="progressVisible"
             type="line"
             :percentage="progressPercent"
-            indicator-placement="inside"
+            :show-indicator="false"
             processing
           />
           <n-space v-if="journeys.length > 0" vertical :size="16">
@@ -161,6 +222,7 @@
               v-for="(journey, index) in displayedJourneys"
               :key="journey.id"
               hoverable
+              style="box-shadow: none"
               :title="`方案 ${index + 1}`"
             >
               <n-space :size="12" style="margin-bottom: 20px"
@@ -170,21 +232,19 @@
                   ><template #icon
                     ><n-icon
                       :component="
-                        journey.searchMode === 'km'
-                          ? SpeedometerOutline
-                          : TimeOutline
+                        journey.searchMode === 'km' ? Location : TimeOutline
                       " /></template
                   >{{
                     journey.searchMode === "km"
-                      ? `${journey.tkm}公里`
+                      ? `${journey.tkm} 公里`
                       : formatDuration(journey.tdur)
                   }}</n-tag
                 ><n-tag type="warning" round
                   ><template #icon
                     ><n-icon :component="SwapHorizontalOutline" /></template
-                  >{{ calculateTransfers(journey) }}次换乘</n-tag
-                ></n-space
-              >
+                  >{{ calculateTransfers(journey) }} 次换乘</n-tag
+                >
+              </n-space>
               <n-timeline>
                 <n-timeline-item
                   v-for="(segment, segIndex) in journey.segments"
@@ -194,15 +254,16 @@
                 >
                   <div v-if="segment.train === '换乘'">
                     <n-space align="center">
-                      <n-text strong>换乘</n-text>
+                      <n-text strong style="font-size: 16px">换乘</n-text>
                       <n-text depth="3">等待:</n-text>
                       <n-text type="warning">{{
                         formatDuration(segment.transferTime)
                       }}</n-text>
                     </n-space>
                   </div>
-                  <div v-else>
-                    <n-space align="baseline" :wrap="false">
+
+                  <div v-else class="segment-content">
+                    <div class="segment-part segment-train">
                       <n-text strong style="font-size: 16px">{{
                         segment.train
                       }}</n-text>
@@ -213,15 +274,21 @@
                         round
                         >非每日</n-tag
                       >
+                    </div>
+
+                    <div class="segment-part segment-route">
                       <n-text style="font-size: 15px"
                         >{{ segment.from }} → {{ segment.to }}</n-text
                       >
+                    </div>
+
+                    <div class="segment-part segment-details">
                       <n-text
                         depth="3"
                         style="font-size: 13px; white-space: nowrap"
                         >({{ segment.details }})</n-text
                       >
-                    </n-space>
+                    </div>
                   </div>
                 </n-timeline-item>
               </n-timeline>
@@ -326,7 +393,7 @@ import {
 } from "naive-ui";
 import {
   TrainOutline,
-  SpeedometerOutline,
+  Location,
   TimeOutline,
   SwapHorizontalOutline,
   SearchOutline,
@@ -334,6 +401,7 @@ import {
   MapOutline,
   LogoGithub,
 } from "@vicons/ionicons5";
+import { SunnyOutline, MoonOutline } from "@vicons/ionicons5";
 import MapRenderer from "./MapRenderer.vue";
 
 const swapOriginDestination = () => {
@@ -344,24 +412,35 @@ const swapOriginDestination = () => {
   ];
 };
 
-const themeOverrides = {
-  common: {
-    bodyColor: "#0d1117",
-    cardColor: "#161b22",
-    borderColor: "#30363d",
-    primaryColor: "#2ea043",
-    primaryColorHover: "#3CC153",
-    primaryColorPressed: "#238636",
-    textColorBase: "#e6edf3",
-    textColor1: "#e6edf3",
-    textColor2: "#c9d1d9",
-    textColor3: "#8b949e",
-  },
-  Button: { borderRadiusMedium: "6px" },
-  Card: { borderRadius: "8px" },
-  Input: { borderRadius: "6px" },
-  AutoComplete: { borderRadius: "6px" },
+const isDark = ref(true);
+
+const currentTheme = computed(() => (isDark.value ? darkTheme : null));
+const currentThemeOverrides = computed(() => (isDark.value ? null : null));
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value;
+  localStorage.setItem("theme", isDark.value ? "dark" : "light");
+
+  window.dispatchEvent(
+    new CustomEvent("theme-changed", {
+      detail: { isDark: isDark.value },
+    })
+  );
+
+  localStorage.setItem("theme-updated", Date.now().toString());
 };
+
+onMounted(() => {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme) {
+    isDark.value = savedTheme === "dark";
+  } else {
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+    isDark.value = prefersDark;
+  }
+});
 const origin = ref("");
 const destination = ref("");
 const escOrigin = ref(false);
@@ -461,8 +540,8 @@ const processJourney = (journey) => {
       segments.push({
         type: "warning",
         train: "换乘",
-        from: raw.p[i - 1].r.al,
-        to: leg.r.bs,
+        from: "",
+        to: "",
         transferTime: leg.wtb,
         color: "#d29922",
       });
@@ -747,3 +826,7 @@ watch([mode, mtt, escOrigin, escDestination], () => {
   }
 });
 </script>
+
+<style>
+
+</style>
