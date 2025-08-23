@@ -5,31 +5,33 @@
     style="height: 100%"
   >
     <n-layout style="min-height: 100vh">
-      <n-layout-header bordered style="padding: 12px 24px">
-        <n-space justify="space-between" align="center">
-          <n-space align="center" :size="12">
-            <n-icon size="28" color="#18a058"><train-outline /></n-icon>
-            <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
-              >铁路换乘查询</n-h1
-            >
-            <n-text depth="3" style="font-size: 10px">v{{ version }}</n-text>
-          </n-space>
-          <n-space align="center" :size="16">
-            <n-text depth="3" style="font-size: 12px">
-              © 2025 noxylva.
-              <a
-                href="https://github.com/undef-i/CRTransfer"
-                target="_blank"
-                style="color: #2ea043; text-decoration: none"
-                >GitHub</a
+      <n-layout-header bordered style="padding: 12px 0">
+        <div style="max-width: 600px; margin: 0 auto; padding: 0 24px;">
+          <n-space justify="space-between" align="center">
+            <n-space align="center" :size="12">
+              <n-icon size="28" color="#18a058"><train-outline /></n-icon>
+              <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
+                >铁路换乘查询</n-h1
               >
-            </n-text>
+              <n-text depth="3" style="font-size: 10px">v{{ version }}</n-text>
+            </n-space>
+            <n-space align="center" :size="16">
+              <n-text depth="3" style="font-size: 12px">
+                © 2025 noxylva.
+                <a
+                  href="https://github.com/undef-i/CRTransfer"
+                  target="_blank"
+                  style="color: #2ea043; text-decoration: none"
+                  >GitHub</a
+                >
+              </n-text>
+            </n-space>
           </n-space>
-        </n-space>
+        </div>
       </n-layout-header>
 
       <n-layout-content
-        style="padding: 24px; max-width: 800px; margin: 0 auto; width: 100%"
+        style="padding: 24px; max-width: 600px; margin: 0 auto; width: 100%"
       >
         <n-space vertical :size="24">
           <n-card title="" hoverable>
@@ -115,7 +117,7 @@
                       v-model:value="mtt"
                       :min="0"
                       :show-button="false"
-                      placeholder="任意"
+                      placeholder="0"
                       style="text-align: center; min-width: 80px"
                     />
                     <n-input-group-label>分钟</n-input-group-label>
@@ -745,137 +747,3 @@ watch([mode, mtt, escOrigin, escDestination], () => {
   }
 });
 </script>
-<style>
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  background-color: #0d1117;
-}
-.map-container {
-  height: 300px;
-  width: 100%;
-  border-radius: 6px;
-  margin-top: 12px;
-}
-
-.input-group {
-  display: flex;
-  align-items: stretch;
-  width: 100%;
-}
-.input-group .n-auto-complete {
-  flex-grow: 1;
-}
-.input-group .n-button {
-  flex-shrink: 0;
-  width: 72px;
-}
-.input-group .n-auto-complete .n-input.n-input--resizable.n-input--stateful {
-  border-top-right-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-.input-group .n-button {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  margin-left: -1px;
-}
-
-.full-width-responsive-group {
-  width: 100%;
-  display: flex;
-}
-.full-width-responsive-group .n-button {
-  flex: 1;
-  text-align: center;
-}
-.full-width-responsive-group .short-text {
-  display: none;
-}
-@media (max-width: 480px) {
-  .full-width-responsive-group .long-text {
-    display: none;
-  }
-  .full-width-responsive-group .short-text {
-    display: inline;
-  }
-}
-
-.trip-planner-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.swap-button {
-  font-size: 20px;
-  color: #8b949e;
-}
-
-@media (min-width: 480px) {
-  .trip-planner-container {
-    flex-direction: row;
-    gap: 16px;
-  }
-
-  .trip-planner-container .input-group {
-    flex: 1;
-  }
-
-  .swap-button {
-    flex-shrink: 0;
-  }
-}
-
-.search-actions-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.search-actions-container .n-input-group {
-  width: 100%;
-}
-.search-actions-container .n-input-group .n-input-number {
-  flex-grow: 1;
-}
-
-.search-actions-container .search-button-wrapper {
-  display: flex;
-  width: 100%;
-}
-.search-actions-container .search-button-wrapper > div {
-  flex-grow: 1;
-}
-.search-actions-container .search-button-wrapper > div > .n-button {
-  width: 100%;
-}
-
-@media (min-width: 480px) {
-  .search-actions-container {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .search-actions-container .n-input-group {
-    width: auto;
-  }
-  .search-actions-container .n-input-group .n-input-number {
-    flex-grow: 0;
-  }
-
-  .search-actions-container .search-button-wrapper {
-    display: flex;
-    width: auto;
-    margin-left: auto;
-  }
-  .search-actions-container .search-button-wrapper > div {
-    flex-grow: 0;
-  }
-  .search-actions-container .search-button-wrapper > div > .n-button {
-    width: auto;
-  }
-}
-</style>
