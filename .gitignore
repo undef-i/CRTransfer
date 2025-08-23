@@ -2,3 +2,4 @@ e*
 target
 node_modules
 data/*.py
+package-lock.json
