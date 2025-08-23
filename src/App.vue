@@ -1,403 +1,881 @@
 <template>
-  <div>
-    <h1>换乘查询 <span id="udt" style="font-size: 14px;">{{ version }}</span></h1>
-    <p>鉴于铁路运行图调整及不可抗力因素，对信息之准确性不作任何保证。途径站点位置信息有部分错漏，仅供辅助参考。<span style="color: red;">红色</span>的车次为非每日开行车次，请自行判断方案可行性。</p>
-    <div>
-      起点：<input type="text" id="o" :value="origin" @input="handleInput" @focus="showSuggestions" @click.stop autocomplete="off"><label><input type="checkbox" id="esc_o" v-model="escOrigin" checked>同城站</label><br>
-      终点：<input type="text" id="d" :value="destination" @input="handleInput" @focus="showSuggestions" @click.stop autocomplete="off"><label><input type="checkbox" id="esc_d" v-model="escDestination" checked>同城站</label>
-      <br>
-      <div id="suggestions" v-html="suggestions" @click.stop></div>
-      <label><input type="radio" name="mode" value="time" v-model="mode" @change="handleModeChange" checked> 最短时间</label>
-      <label><input type="radio" name="mode" value="xfer" v-model="mode" @change="handleModeChange"> 最少换乘</label>
-      <label><input type="radio" name="mode" value="km" v-model="mode" @change="handleModeChange"> 最短里程</label>
-      <br>
-      <span id="mtt_container" :style="{ display: mode === 'km' ? 'none' : 'inline' }">
-        <label>换乘时间：</label>
-        <input type="number" id="mtt" v-model="mtt"> 分钟
-        <br>
-      </span>
-      <label><input type="checkbox" id="show_stations" v-model="showStations"> 显示途径站点</label>
-      <br>
-      <div id="pbar_container" :style="{ visibility: progressVisible ? 'visible' : 'hidden' }">
-        <progress id="pbar" :value="progressValue" :max="progressMax" style="width: 100%; vertical-align: middle;"></progress>
-      </div>
-      <button id="ab" @click="toggleSearch" :disabled="(!ready && !running)">{{ running ? '停止' : '搜索' }}</button>
-    </div>
-    <div id="st"><p><strong>{{ statusMessage }}</strong></p></div>
-    <div id="rs" ref="resultsContainer"></div>
+  <n-config-provider
+    :theme="darkTheme"
+    :theme-overrides="themeOverrides"
+    style="height: 100%"
+  >
+    <n-layout style="min-height: 100vh">
+      <n-layout-header bordered style="padding: 12px 24px">
+        <n-space justify="space-between" align="center">
+          <n-space align="center" :size="12">
+            <n-icon size="28" color="#18a058"><train-outline /></n-icon>
+            <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
+              >铁路换乘查询</n-h1
+            >
+            <n-text depth="3" style="font-size: 10px">v{{ version }}</n-text>
+          </n-space>
+          <n-space align="center" :size="16">
+            <n-text depth="3" style="font-size: 12px">
+              © 2025 noxylva.
+              <a
+                href="https://github.com/undef-i/CRTransfer"
+                target="_blank"
+                style="color: #2ea043; text-decoration: none"
+                >GitHub</a
+              >
+            </n-text>
+          </n-space>
+        </n-space>
+      </n-layout-header>
 
-    <hr>
-    <p>
-      © 2025 noxylva. Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">AGPLv3</a> |
-      <a href="https://github.com/undef-i/CRTransfer" target="_blank">GitHub</a>
-    </p>
-  </div>
+      <n-layout-content
+        style="padding: 24px; max-width: 800px; margin: 0 auto; width: 100%"
+      >
+        <n-space vertical :size="24">
+          <n-card title="" hoverable>
+            <n-space vertical :size="20">
+              <n-button-group class="full-width-responsive-group">
+                <n-button
+                  :type="mode === 'time' ? 'primary' : 'default'"
+                  :ghost="mode !== 'time'"
+                  @click="mode = 'time'"
+                >
+                  <span class="long-text">最短在途时间</span>
+                  <span class="short-text">时间</span>
+                </n-button>
+                <n-button
+                  :type="mode === 'xfer' ? 'primary' : 'default'"
+                  :ghost="mode !== 'xfer'"
+                  @click="mode = 'xfer'"
+                >
+                  <span class="long-text">最少换乘次数</span>
+                  <span class="short-text">换乘</span>
+                </n-button>
+                <n-button
+                  :type="mode === 'km' ? 'primary' : 'default'"
+                  :ghost="mode !== 'km'"
+                  @click="mode = 'km'"
+                >
+                  <span class="long-text">最短途径里程</span>
+                  <span class="short-text">里程</span>
+                </n-button>
+              </n-button-group>
+              <div class="trip-planner-container">
+                <div class="input-group">
+                  <n-auto-complete
+                    v-model:value="origin"
+                    :options="originOptions"
+                    placeholder="起点"
+                    clearable
+                  />
+                  <n-button
+                    :type="escOrigin ? 'primary' : 'default'"
+                    :ghost="!escOrigin"
+                    @click="escOrigin = !escOrigin"
+                  >
+                    同城站
+                  </n-button>
+                </div>
+
+                <n-button
+                  text
+                  circle
+                  class="swap-button"
+                  @click="swapOriginDestination"
+                >
+                  <template #icon
+                    ><n-icon :component="SwapHorizontalOutline"
+                  /></template>
+                </n-button>
+
+                <div class="input-group">
+                  <n-auto-complete
+                    v-model:value="destination"
+                    :options="destinationOptions"
+                    placeholder="终点"
+                    clearable
+                  />
+                  <n-button
+                    :type="escDestination ? 'primary' : 'default'"
+                    :ghost="!escDestination"
+                    @click="escDestination = !escDestination"
+                  >
+                    同城站
+                  </n-button>
+                </div>
+              </div>
+
+              <n-divider style="margin: 0" />
+
+              <div class="search-actions-container">
+                <n-collapse-transition :show="mode !== 'km'">
+                  <n-input-group>
+                    <n-input-group-label>最短换乘时间</n-input-group-label>
+                    <n-input-number
+                      v-model:value="mtt"
+                      :min="0"
+                      :show-button="false"
+                      placeholder="任意"
+                      style="text-align: center; min-width: 80px"
+                    />
+                    <n-input-group-label>分钟</n-input-group-label>
+                  </n-input-group>
+                </n-collapse-transition>
+
+                <n-space
+                  justify="end"
+                  align="center"
+                  class="search-button-wrapper"
+                >
+                  <n-button
+                    :type="running ? 'error' : 'primary'"
+                    :ghost="running"
+                    :loading="!ready"
+                    :disabled="(!origin || !destination) && !ready"
+                    @click="handlePrimaryButtonClick"
+                  >
+                    <template #icon
+                      ><n-icon :component="primaryButtonIcon"
+                    /></template>
+                    {{ running ? "停止" : "搜索" }}
+                  </n-button>
+                </n-space>
+              </div>
+            </n-space>
+          </n-card>
+
+          <n-alert v-if="statusMessage" :type="statusType" :show-icon="true">{{
+            statusMessage
+          }}</n-alert>
+          <n-progress
+            v-if="progressVisible"
+            type="line"
+            :percentage="progressPercent"
+            indicator-placement="inside"
+            processing
+          />
+          <n-space v-if="journeys.length > 0" vertical :size="16">
+            <n-card
+              v-for="(journey, index) in displayedJourneys"
+              :key="journey.id"
+              hoverable
+              :title="`方案 ${index + 1}`"
+            >
+              <n-space :size="12" style="margin-bottom: 20px"
+                ><n-tag
+                  :type="journey.searchMode === 'km' ? 'info' : 'success'"
+                  round
+                  ><template #icon
+                    ><n-icon
+                      :component="
+                        journey.searchMode === 'km'
+                          ? SpeedometerOutline
+                          : TimeOutline
+                      " /></template
+                  >{{
+                    journey.searchMode === "km"
+                      ? `${journey.tkm}公里`
+                      : formatDuration(journey.tdur)
+                  }}</n-tag
+                ><n-tag type="warning" round
+                  ><template #icon
+                    ><n-icon :component="SwapHorizontalOutline" /></template
+                  >{{ calculateTransfers(journey) }}次换乘</n-tag
+                ></n-space
+              >
+              <n-timeline>
+                <n-timeline-item
+                  v-for="(segment, segIndex) in journey.segments"
+                  :key="segIndex"
+                  :type="segment.type"
+                  :color="segment.color"
+                >
+                  <div v-if="segment.train === '换乘'">
+                    <n-space align="center">
+                      <n-text strong>换乘</n-text>
+                      <n-text depth="3">等待:</n-text>
+                      <n-text type="warning">{{
+                        formatDuration(segment.transferTime)
+                      }}</n-text>
+                    </n-space>
+                  </div>
+                  <div v-else>
+                    <n-space align="baseline" :wrap="false">
+                      <n-text strong style="font-size: 16px">{{
+                        segment.train
+                      }}</n-text>
+                      <n-tag
+                        v-if="segment.isNonDaily"
+                        type="error"
+                        size="small"
+                        round
+                        >非每日</n-tag
+                      >
+                      <n-text style="font-size: 15px"
+                        >{{ segment.from }} → {{ segment.to }}</n-text
+                      >
+                      <n-text
+                        depth="3"
+                        style="font-size: 13px; white-space: nowrap"
+                        >({{ segment.details }})</n-text
+                      >
+                    </n-space>
+                  </div>
+                </n-timeline-item>
+              </n-timeline>
+
+              <n-collapse style="margin-top: 20px">
+                <n-collapse-item>
+                  <template #header>
+                    <div
+                      @click="handleExpandJourney(journey)"
+                      style="width: 100%; user-select: none"
+                    >
+                      <n-space align="center" :size="8">
+                        <n-icon><map-outline /></n-icon>
+                        <n-text>途经站点与线路图</n-text>
+                      </n-space>
+                    </div>
+                  </template>
+                  <div
+                    v-if="journey.stationsLoading"
+                    style="text-align: center; padding: 20px"
+                  >
+                    <n-spin size="small" /><n-text
+                      depth="3"
+                      style="margin-left: 8px"
+                      >正在加载站点数据...</n-text
+                    >
+                  </div>
+                  <div v-else-if="journey.stationsError" style="padding: 10px">
+                    <n-alert type="error" :show-icon="true">{{
+                      journey.stationsError
+                    }}</n-alert>
+                  </div>
+                  <div
+                    v-else-if="journey.allStops && journey.allStops.length > 0"
+                  >
+                    <n-text
+                      depth="3"
+                      style="margin-bottom: 12px; display: block"
+                      >{{
+                        journey.allStops.map((s) => s.n).join(" → ")
+                      }}</n-text
+                    >
+                    <MapRenderer :stops="journey.allStops" />
+                  </div>
+                  <n-empty
+                    v-else
+                    description="未能获取到该线路的途经站点信息。"
+                    style="padding: 20px"
+                  />
+                </n-collapse-item>
+              </n-collapse>
+            </n-card>
+            <div
+              v-if="
+                displayCount < journeys.length ||
+                (running && journeys.length >= displayCount)
+              "
+              ref="scrollObserver"
+              style="height: 20px"
+            ></div>
+          </n-space>
+        </n-space>
+      </n-layout-content>
+    </n-layout>
+  </n-config-provider>
 </template>
 
-<script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import {
+  darkTheme,
+  NConfigProvider,
+  NLayout,
+  NLayoutHeader,
+  NLayoutContent,
+  NSpace,
+  NIcon,
+  NH1,
+  NText,
+  NCard,
+  NGrid,
+  NGi,
+  NAutoComplete,
+  NSwitch,
+  NButtonGroup,
+  NButton,
+  NCollapseTransition,
+  NFormItem,
+  NInputNumber,
+  NDivider,
+  NAlert,
+  NProgress,
+  NTag,
+  NTimeline,
+  NTimelineItem,
+  NCollapse,
+  NCollapseItem,
+  NSpin,
+  NEmpty,
+  NInputGroup,
+  NInputGroupLabel,
+} from "naive-ui";
+import {
+  TrainOutline,
+  SpeedometerOutline,
+  TimeOutline,
+  SwapHorizontalOutline,
+  SearchOutline,
+  StopCircleOutline,
+  MapOutline,
+  LogoGithub,
+} from "@vicons/ionicons5";
+import MapRenderer from "./MapRenderer.vue";
 
+const swapOriginDestination = () => {
+  [origin.value, destination.value] = [destination.value, origin.value];
+  [escOrigin.value, escDestination.value] = [
+    escDestination.value,
+    escOrigin.value,
+  ];
+};
+
+const themeOverrides = {
+  common: {
+    bodyColor: "#0d1117",
+    cardColor: "#161b22",
+    borderColor: "#30363d",
+    primaryColor: "#2ea043",
+    primaryColorHover: "#3CC153",
+    primaryColorPressed: "#238636",
+    textColorBase: "#e6edf3",
+    textColor1: "#e6edf3",
+    textColor2: "#c9d1d9",
+    textColor3: "#8b949e",
+  },
+  Button: { borderRadiusMedium: "6px" },
+  Card: { borderRadius: "8px" },
+  Input: { borderRadius: "6px" },
+  AutoComplete: { borderRadius: "6px" },
+};
+const origin = ref("");
+const destination = ref("");
+const escOrigin = ref(false);
+const escDestination = ref(false);
+const mode = ref("time");
+const mtt = ref(0);
+const progressVisible = ref(false);
+const progressValue = ref(0);
+const progressMax = ref(0);
+const running = ref(false);
+const ready = ref(false);
+const statusMessage = ref("正在初始化...");
+const version = ref("");
+const journeys = ref([]);
+const displayCount = ref(0);
+const scrollObserver = ref(null);
 let w = null;
-let journeyBuffer = [];
-let journeyCount = 0;
-let displayedJourneys = 0;
-const BATCH_SIZE = 50;
-let maxDisplay = BATCH_SIZE;
-let isRendering = false;
-
-let run = false;
-let rdy = false;
-let stationNames = [];
+const stationNames = ref([]);
 let nonDailyTrains = [];
-let currentInputTarget = null;
+const BATCH_SIZE = 20;
 const gtsPromiseMap = new Map();
+const rawJourneyBuffer = new Map();
+let journeyResultBuffer = [];
+let bufferUpdateInterval = null;
 
-export default {
-  name: 'App',
-  setup() {
-    const origin = ref('');
-    const destination = ref('');
-    const escOrigin = ref(true);
-    const escDestination = ref(true);
-    const mode = ref('time');
-    const mtt = ref(0);
-    const showStations = ref(false);
-    const progressVisible = ref(false);
-    const progressValue = ref(0);
-    const progressMax = ref(0);
-    const running = ref(false);
-    const ready = ref(false);
-    const statusMessage = ref('启动');
-    const suggestions = ref('&nbsp;');
-    const version = ref('');
-    const resultsContainer = ref(null);
+const primaryButtonIcon = computed(() =>
+  running.value ? StopCircleOutline : SearchOutline
+);
+const progressPercent = computed(() =>
+  progressMax.value > 0
+    ? Math.round((progressValue.value / progressMax.value) * 100)
+    : 0
+);
+const statusType = computed(() => {
+  const msg = statusMessage.value;
+  if (msg.includes("错误")) return "error";
+  if (msg.includes("共") || msg.includes("查询到")) return "success";
+  if (running.value || msg.includes("加载")) return "info";
+  if (msg.includes("就绪") || msg.includes("查询条件更改")) return "success";
+  return "default";
+});
+const originOptions = computed(() => {
+  const input = origin.value.toLowerCase();
+  if (!input) return [];
+  return stationNames.value
+    .filter((name) => name.toLowerCase().includes(input))
+    .map((name) => ({ label: name, value: name }));
+});
+const destinationOptions = computed(() => {
+  const input = destination.value.toLowerCase();
+  if (!input) return [];
+  return stationNames.value
+    .filter((name) => name.toLowerCase().includes(input))
+    .map((name) => ({ label: name, value: name }));
+});
+const displayedJourneys = computed(() =>
+  journeys.value.slice(0, displayCount.value)
+);
 
-    const formatDuration = (m) => {
-      if (m === null) return "N/A";
-      const d = Math.floor(m / 1440), rem = m % 1440, h = Math.floor(rem / 60), mins = rem % 60;
-      let p = [];
-      if (d > 0) p.push(`${d}天`);
-      if (h > 0) p.push(`${h}小时`);
-      if (mins > 0) p.push(`${mins}分钟`);
-      return p.length > 0 ? p.join(" ") : "0分钟";
-    };
-
-    const formatArrivalTime = (am) => {
-      if (am === null) return "N/A";
-      const day = Math.floor(am / 1440), rem = am % 1440, h = Math.floor(rem / 60), m = rem % 60;
-      return `第${day + 1}天 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    };
-    
-    const showSuggestions = (event) => {
-      currentInputTarget = event.target;
-      const query = event.target.value.toLowerCase();
-      if (!query || !stationNames) {
-        hideSuggestions();
-        return;
-      }
-      const matched = stationNames.filter(s => s.toLowerCase().includes(query)).slice(0, 8);
-      if (matched.length === 0) {
-        hideSuggestions();
-        return;
-      }
-      suggestions.value = matched.map(s => `<a href="#" onmousedown="selectSuggestion('${s.replace(/'/g, "\\'")}')">${s}</a>`).join(' | ');
-    };
-    
-    const hideSuggestions = () => {
-      suggestions.value = '&nbsp;';
-    };
-
-    window.selectSuggestion = (s) => {
-      if (currentInputTarget) {
-        if (currentInputTarget.id === 'o') origin.value = s;
-        if (currentInputTarget.id === 'd') destination.value = s;
-      }
-      hideSuggestions();
-    };
-    
-    const handleInput = (event) => {
-        if (event.target.id === 'o') origin.value = event.target.value;
-        if (event.target.id === 'd') destination.value = event.target.value;
-        showSuggestions(event);
-    };
-
-
-    const getTrainStops = (trainNumber, fromStation, toStation) => {
-      if (w) {
-        const requestId = Date.now() + Math.random();
-        const promise = new Promise((resolve, reject) => {
-          gtsPromiseMap.set(requestId, { resolve, reject });
-          setTimeout(() => {
-            if (gtsPromiseMap.has(requestId)) {
-              gtsPromiseMap.delete(requestId);
-              reject(new Error('Request for train stops timed out'));
-            }
-          }, 10000);
-        });
-        w.postMessage({ t: 'gts', requestId, d: { n: trainNumber, f: fromStation, t: toStation } });
-        return promise;
-      }
-      return Promise.reject(new Error('Worker not initialized'));
-    };
-    
-    const displayJourney = async (journey, index) => {
-      const isKmMode = mode.value === 'km';
-      const transfers = journey.p.length > 1 ? journey.p.slice(1).reduce((acc, leg, i) => acc + (leg.r.tn !== journey.p[i].r.tn ? 1 : 0), 0) : 0;
-      
-      let pathHtml = '';
-      let allStopsForMap = [];
-      let allStationNames = new Set();
-      let currentTime = journey.idt;
-
-      for (let i = 0; i < journey.p.length; i++) {
-        const leg = journey.p[i];
-        if (leg.wtb > 0 && i > 0 && leg.r.tn !== journey.p[i-1].r.tn) {
-          pathHtml += `<li><strong>${leg.r.bs} 换乘</strong> (${formatDuration(leg.wtb)})</li>`;
-        }
-        currentTime += leg.wtb;
-        const departureTime = formatArrivalTime(currentTime).slice(-5);
-        
-        let k = i;
-        let finalArrivalTime = currentTime + leg.r.dur;
-        let finalStation = leg.r.al;
-        let totalKm = leg.r.km;
-        while(k + 1 < journey.p.length && journey.p[k+1].r.tn === leg.r.tn) {
-            k++;
-            const nextLeg = journey.p[k];
-            finalArrivalTime += nextLeg.wtb + nextLeg.r.dur;
-            finalStation = nextLeg.r.al;
-            totalKm += nextLeg.r.km;
-        }
-
-        const details = isKmMode 
-          ? `${leg.r.bs} → ${finalStation} <span style="font-size: smaller; color: #888;">(${totalKm}公里)</span>`
-          : `${leg.r.bs} ${departureTime} → ${finalStation} ${formatArrivalTime(finalArrivalTime).slice(-5)} <span style="font-size: smaller; color: #888;">(${totalKm}公里)</span>`;
-
-        const tstyle = nonDailyTrains.includes(leg.r.tn) ? ' style="color: red;"' : '';
-        pathHtml += `<li><strong${tstyle}>${leg.r.tn}:</strong> ${details}</li>`;
-        
-        if (showStations.value) {
-            try {
-                const stops = await getTrainStops(leg.r.tn, leg.r.bs, finalStation);
-                stops.forEach(s => allStationNames.add(s.n));
-                allStopsForMap.push(...stops);
-            } catch (e) {
-                console.error(`Could not fetch stops for ${leg.r.tn}:`, e);
-            }
-        }
-        currentTime = finalArrivalTime;
-        i = k;
-      }
-      
-      let summaryHtml = isKmMode
-        ? `<p><strong>总里程：</strong> ${journey.tkm}公里 | <strong>换乘：</strong> ${transfers}次</p>`
-        : `<p><strong>用时：</strong> ${formatDuration(journey.tdur)} | <strong>换乘：</strong> ${transfers}次</p>
-           <p>${journey.p[0].r.bs} ${formatArrivalTime(journey.idt)} → ${journey.p[journey.p.length - 1].r.al} ${formatArrivalTime(journey.aat)}</p>`;
-
-      const journeyDiv = document.createElement('div');
-      journeyDiv.innerHTML = `<hr><h3>方案 ${index}</h3>${summaryHtml}`;
-      
-      if (showStations.value) {
-          journeyDiv.innerHTML += `<p><strong>途径站点：</strong> ${[...allStationNames].join(' → ')}</p>`;
-      }
-      journeyDiv.innerHTML += `<h4>路径：</h4><ul>${pathHtml}</ul>`;
-
-      if (showStations.value) {
-        const mapContainer = document.createElement('div');
-        mapContainer.id = `map-${index}`;
-        mapContainer.className = 'map-container';
-        journeyDiv.appendChild(mapContainer);
-      }
-      
-      resultsContainer.value.appendChild(journeyDiv);
-      
-      if (showStations.value && allStopsForMap.length > 0) {
-        renderMap(index, allStopsForMap);
-      }
-    };
-    
-    const renderBufferedJourneys = async () => {
-        if(isRendering) return;
-        isRendering = true;
-        try {
-            while (displayedJourneys < journeyBuffer.length && displayedJourneys < maxDisplay) {
-                await displayJourney(journeyBuffer[displayedJourneys], displayedJourneys + 1);
-                displayedJourneys++;
-            }
-        } finally {
-            isRendering = false;
-        }
-    };
-
-    const toggleSearch = () => {
-      if (run) stopSearch();
-      else startSearch();
-    };
-
-    const startSearch = () => {
-      if (run || !rdy) return;
-      if (!origin.value.trim() || !destination.value.trim()) {
-        statusMessage.value = '输入起点和终点';
-        return;
-      }
-      
-      run = true;
-      running.value = true;
-      statusMessage.value = '搜索...';
-      resultsContainer.value.innerHTML = '';
-      journeyBuffer = [];
-      journeyCount = 0;
-      displayedJourneys = 0;
-      maxDisplay = BATCH_SIZE;
-
-      const msg = {
-        o: origin.value.trim(),
-        d: destination.value.trim(),
-        esc_o: escOrigin.value,
-        esc_d: escDestination.value,
-        t: mode.value === 'km' ? 'start_k' : (mode.value === 'xfer' ? 'start_mx' : 'start'),
-        mtt: parseInt(mtt.value) || 0,
-      };
-      w.postMessage(msg);
-    };
-
-    const stopSearch = () => {
-      if (run && w) {
-        w.postMessage({ t: 'stop' });
-      }
-      finishSearch();
-    };
-    
-    const finishSearch = () => {
-        run = false;
-        running.value = false;
-    };
-
-    const initWorker = () => {
-      if (w) return;
-      statusMessage.value = '加载';
-      w = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
-      w.onmessage = (e) => {
-        const { t, d, requestId } = e.data;
-        switch (t) {
-          case 'pgr_start':
-            progressVisible.value = true;
-            break;
-          case 'pgr_upd':
-            progressValue.value = d.ld;
-            progressMax.value = d.tt;
-            break;
-          case 'j_fnd':
-            journeyCount++;
-            journeyBuffer.push(d);
-            statusMessage.value = `查询到 ${journeyCount} 条方案`;
-            renderBufferedJourneys();
-            break;
-          case 'done':
-            finishSearch();
-            if (journeyCount === 0) statusMessage.value = '无方案';
-            else statusMessage.value = `共 ${journeyCount} 条方案`;
-            break;
-          case 'err':
-            statusMessage.value = `错误: ${d}`;
-            finishSearch();
-            break;
-          case 'init_done':
-            progressVisible.value = false;
-            rdy = true;
-            ready.value = true;
-            statusMessage.value = '就绪';
-            w.postMessage({ t: 'get_stn' });
-            break;
-          case 'stn':
-            stationNames = d;
-            break;
-          case 'ts': 
-            if (requestId && gtsPromiseMap.has(requestId)) {
-                gtsPromiseMap.get(requestId).resolve(d);
-                gtsPromiseMap.delete(requestId);
-            }
-            break;
-        }
-      };
-      w.onerror = (err) => {
-        statusMessage.value = `Worker 错误: ${err.message}`;
-        finishSearch();
-      };
-      w.postMessage({ t: 'init_only' });
-    };
-    
-    const renderMap = (mapId, stops) => {
-        const validStops = stops.filter(s => s.lat != null && s.lon != null && s.lat !== 0 && s.lon !== 0);
-        if (validStops.length === 0) return;
-
-        const map = L.map(`map-${mapId}`).setView([35.8617, 104.1954], 4);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        const latLngs = validStops.map(s => [s.lat, s.lon]);
-        const polyline = L.polyline(latLngs, { color: 'black', weight: 3 }).addTo(map);
-        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-
-        validStops.forEach(s => {
-            L.circleMarker([s.lat, s.lon], { radius: 3, color: 'black' }).addTo(map).bindPopup(s.n);
-        });
-    };
-    
-    const onScroll = () => {
-        if (isRendering || displayedJourneys >= journeyBuffer.length) return;
-        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
-            maxDisplay += BATCH_SIZE;
-            renderBufferedJourneys();
-        }
-    };
-
-    onMounted(async () => {
-      try {
-        const rsp = await fetch('ndt.json');
-        nonDailyTrains = await rsp.json();
-      } catch (e) { /* ignore */ }
-      try {
-        const rsp = await fetch('version');
-        const v = (await rsp.text()).trim();
-        if (v.length === 8) version.value = v;
-      } catch (e) { /* ignore */ }
-      
-      initWorker();
-      
-      document.body.addEventListener('click', hideSuggestions);
-      window.addEventListener('scroll', onScroll, { passive: true });
-      document.getElementById('o').addEventListener('keypress', (e) => { if (e.key === 'Enter') startSearch(); });
-      document.getElementById('d').addEventListener('keypress', (e) => { if (e.key === 'Enter') startSearch(); });
+const formatDuration = (m) => {
+  if (m === null) return "N/A";
+  const d = Math.floor(m / 1440),
+    rem = m % 1440,
+    h = Math.floor(rem / 60),
+    mins = rem % 60;
+  let p = [];
+  if (d > 0) p.push(`${d}天`);
+  if (h > 0) p.push(`${h}小时`);
+  if (mins > 0) p.push(`${mins}分钟`);
+  return p.length > 0 ? p.join(" ") : "0分钟";
+};
+const formatArrivalTime = (am) => {
+  if (am === null) return "N/A";
+  const day = Math.floor(am / 1440),
+    rem = am % 1440,
+    h = Math.floor(rem / 60),
+    m = rem % 60;
+  return `第${day + 1}天 ${h.toString().padStart(2, "0")}:${m
+    .toString()
+    .padStart(2, "0")}`;
+};
+const calculateTransfers = (journey) => {
+  const raw = rawJourneyBuffer.get(journey.id);
+  if (!raw || !raw.p || raw.p.length <= 1) return 0;
+  return raw.p
+    .slice(1)
+    .reduce((acc, leg, i) => acc + (leg.r.tn !== raw.p[i].r.tn ? 1 : 0), 0);
+};
+const processJourney = (journey) => {
+  const raw = rawJourneyBuffer.get(journey.id);
+  if (!raw || !raw.p) return [];
+  const segments = [];
+  let currentTime = raw.idt;
+  for (let i = 0; i < raw.p.length; i++) {
+    const leg = raw.p[i];
+    if (leg.wtb > 0 && i > 0 && leg.r.tn !== raw.p[i - 1].r.tn) {
+      segments.push({
+        type: "warning",
+        train: "换乘",
+        from: raw.p[i - 1].r.al,
+        to: leg.r.bs,
+        transferTime: leg.wtb,
+        color: "#d29922",
+      });
+    }
+    currentTime += leg.wtb;
+    const departureTime = formatArrivalTime(currentTime).slice(-5);
+    let k = i;
+    let finalArrivalTime = currentTime + leg.r.dur;
+    let finalStation = leg.r.al;
+    let totalKm = leg.r.km;
+    while (k + 1 < raw.p.length && raw.p[k + 1].r.tn === leg.r.tn) {
+      k++;
+      const nextLeg = raw.p[k];
+      finalArrivalTime += nextLeg.wtb + nextLeg.r.dur;
+      finalStation = nextLeg.r.al;
+      totalKm += nextLeg.r.km;
+    }
+    segments.push({
+      type: "success",
+      train: leg.r.tn,
+      from: leg.r.bs,
+      to: finalStation,
+      details:
+        journey.searchMode === "km"
+          ? `${totalKm}公里`
+          : `${departureTime} → ${formatArrivalTime(finalArrivalTime).slice(
+              -5
+            )}`,
+      color: "#2ea043",
+      isNonDaily: nonDailyTrains.includes(leg.r.tn),
     });
-    
-    onBeforeUnmount(() => {
-        document.body.removeEventListener('click', hideSuggestions);
-        window.removeEventListener('scroll', onScroll);
+    currentTime = finalArrivalTime;
+    i = k;
+  }
+  return segments;
+};
+const getTrainStops = (trainNumber, fromStation, toStation) => {
+  const requestId = Date.now() + Math.random();
+  const promise = new Promise((resolve, reject) => {
+    gtsPromiseMap.set(requestId, { resolve, reject });
+    setTimeout(() => {
+      if (gtsPromiseMap.has(requestId)) {
+        gtsPromiseMap.delete(requestId);
+        reject(new Error("请求超时"));
+      }
+    }, 10000);
+  });
+  w.postMessage({
+    t: "gts",
+    requestId,
+    d: { n: trainNumber, f: fromStation, t: toStation },
+  });
+  return promise;
+};
+const handleExpandJourney = async (journey) => {
+  if (journey.allStops || journey.stationsLoading) return;
+  const rawJourney = rawJourneyBuffer.get(journey.id);
+  if (!rawJourney || !rawJourney.p) {
+    journey.stationsError = "内部数据错误";
+    return;
+  }
+  journey.stationsLoading = true;
+  journey.stationsError = null;
+  try {
+    const allStopsArrays = [];
+    for (let i = 0; i < rawJourney.p.length; i++) {
+      const leg = rawJourney.p[i];
+      let k = i;
+      let finalStation = leg.r.al;
+      while (
+        k + 1 < rawJourney.p.length &&
+        rawJourney.p[k + 1].r.tn === leg.r.tn
+      ) {
+        k++;
+        finalStation = rawJourney.p[k].r.al;
+      }
+      const stops = await getTrainStops(leg.r.tn, leg.r.bs, finalStation);
+      allStopsArrays.push(stops);
+      i = k;
+    }
+    const allStops = allStopsArrays.flat();
+    const uniqueStops = [];
+    const seenStationNames = new Set();
+    allStops.forEach((stop) => {
+      if (!seenStationNames.has(stop.n)) {
+        seenStationNames.add(stop.n);
+        uniqueStops.push(stop);
+      }
     });
-
-    return {
-      origin, destination, escOrigin, escDestination, mode, mtt, showStations,
-      progressVisible, progressValue, progressMax, running, ready, statusMessage,
-      suggestions, version, resultsContainer,
-      toggleSearch, showSuggestions, handleInput
-    };
+    journey.allStops = uniqueStops;
+  } catch (e) {
+    console.error("获取途径站点失败:", e);
+    journey.stationsError = `无法加载站点数据: ${e.message}`;
+  } finally {
+    journey.stationsLoading = false;
   }
 };
+const initWorker = () => {
+  if (w) return;
+  w = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+  w.onmessage = (e) => {
+    const { t, d, requestId } = e.data;
+    switch (t) {
+      case "pgr_start":
+        progressVisible.value = true;
+        break;
+      case "pgr_upd":
+        progressValue.value = d.ld;
+        progressMax.value = d.tt;
+        break;
+      case "j_fnd": {
+        if (!running.value) return;
+        const dataFromWorker = d;
+        const journeyId = Math.random().toString(36).substring(2, 9);
+        rawJourneyBuffer.set(journeyId, dataFromWorker);
+        const journeyForUI = {
+          id: journeyId,
+          tkm: dataFromWorker.tkm,
+          tdur: dataFromWorker.tdur,
+          stationsLoading: false,
+          stationsError: null,
+          allStops: null,
+          searchMode: mode.value,
+        };
+        journeyForUI.segments = processJourney(journeyForUI);
+        journeyResultBuffer.push(journeyForUI);
+        break;
+      }
+      case "done":
+        finishSearch();
+        if (journeys.value.length === 0) statusMessage.value = "无方案";
+        else statusMessage.value = `共 ${journeys.value.length} 条方案`;
+        break;
+      case "err":
+        statusMessage.value = `错误: ${d}`;
+        finishSearch();
+        break;
+      case "init_done":
+        progressVisible.value = false;
+        ready.value = true;
+        statusMessage.value = "就绪";
+        w.postMessage({ t: "get_stn" });
+        break;
+      case "stn":
+        stationNames.value = d;
+        break;
+      case "ts":
+        if (gtsPromiseMap.has(requestId)) {
+          gtsPromiseMap.get(requestId).resolve(d);
+          gtsPromiseMap.delete(requestId);
+        }
+        break;
+      case "gts_err":
+        if (gtsPromiseMap.has(requestId)) {
+          gtsPromiseMap.get(requestId).reject(new Error(d));
+          gtsPromiseMap.delete(requestId);
+        }
+        break;
+    }
+  };
+  w.onerror = (err) => {
+    statusMessage.value = `Worker 错误: ${err.message}`;
+    finishSearch();
+  };
+  w.postMessage({ t: "init_only" });
+};
+const startSearch = () => {
+  if (running.value || !ready.value) return;
+  running.value = true;
+  statusMessage.value = "正在搜索，请稍候...";
+  journeys.value = [];
+  rawJourneyBuffer.clear();
+  journeyResultBuffer = [];
+  displayCount.value = BATCH_SIZE;
+  if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
+  bufferUpdateInterval = setInterval(() => {
+    if (journeyResultBuffer.length > 0) {
+      journeys.value.push(...journeyResultBuffer);
+      journeyResultBuffer = [];
+      if (running.value) {
+        statusMessage.value = `查询到 ${journeys.value.length} 条方案...`;
+      }
+    }
+  }, 250);
+  w.postMessage({
+    o: origin.value.trim(),
+    d: destination.value.trim(),
+    esc_o: escOrigin.value,
+    esc_d: escDestination.value,
+    t:
+      mode.value === "km"
+        ? "start_k"
+        : mode.value === "xfer"
+        ? "start_mx"
+        : "start",
+    mtt: parseInt(mtt.value) || 0,
+  });
+};
+const finishSearch = () => {
+  if (!running.value) return;
+  running.value = false;
+  if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
+  bufferUpdateInterval = null;
+  if (journeyResultBuffer.length > 0) {
+    journeys.value.push(...journeyResultBuffer);
+    journeyResultBuffer = [];
+  }
+  if (journeys.value.length > 0) {
+    statusMessage.value = `搜索完成，共找到 ${journeys.value.length} 条方案`;
+  } else if (statusMessage.value.includes("搜索")) {
+    statusMessage.value = "搜索已停止";
+  }
+};
+const stopSearch = () => {
+  if (running.value && w) {
+    w.postMessage({ t: "stop" });
+  }
+};
+const handlePrimaryButtonClick = () => {
+  if (running.value) {
+    stopSearch();
+  } else {
+    startSearch();
+  }
+};
+const loadMore = () => {
+  if (displayCount.value >= journeys.value.length) return;
+  displayCount.value = Math.min(
+    displayCount.value + BATCH_SIZE,
+    journeys.value.length
+  );
+};
+let observer = null;
+onMounted(async () => {
+  try {
+    const [ndtRes, verRes] = await Promise.all([
+      fetch("ndt.json"),
+      fetch("version"),
+    ]);
+    nonDailyTrains = await ndtRes.json();
+    const v = (await verRes.text()).trim();
+    if (v.length === 8) version.value = v;
+  } catch (e) {
+    console.error("加载初始数据失败:", e);
+  }
+  initWorker();
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          loadMore();
+          break;
+        }
+      }
+    },
+    { threshold: 0.5 }
+  );
+});
+watch(scrollObserver, (newEl, oldEl) => {
+  if (observer) {
+    if (oldEl) {
+      observer.unobserve(oldEl);
+    }
+    if (newEl) {
+      observer.observe(newEl);
+    }
+  }
+});
+onBeforeUnmount(() => {
+  if (w) w.terminate();
+  if (observer) observer.disconnect();
+  if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
+  gtsPromiseMap.forEach(({ reject }) => reject(new Error("组件已卸载")));
+  gtsPromiseMap.clear();
+});
+watch([mode, mtt, escOrigin, escDestination], () => {
+  if (!running.value && journeys.value.length > 0) {
+    journeys.value = [];
+    rawJourneyBuffer.clear();
+    displayCount.value = 0;
+    statusMessage.value = "查询条件更改，重新搜索";
+  }
+});
 </script>
-
 <style>
-/* Basic styles to ensure map visibility */
-.map-container {
-  width: 100%;
-  height: 350px;
-  margin: 15px 0;
-  border: 1px solid #ccc;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: #0d1117;
 }
-#suggestions a {
-    margin: 0 5px;
+.map-container {
+  height: 300px;
+  width: 100%;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.input-group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+.input-group .n-auto-complete {
+  flex-grow: 1;
+}
+.input-group .n-button {
+  flex-shrink: 0;
+  width: 72px;
+}
+.input-group .n-auto-complete .n-input.n-input--resizable.n-input--stateful {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.input-group .n-button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+.full-width-responsive-group {
+  width: 100%;
+  display: flex;
+}
+.full-width-responsive-group .n-button {
+  flex: 1;
+  text-align: center;
+}
+.full-width-responsive-group .short-text {
+  display: none;
+}
+@media (max-width: 480px) {
+  .full-width-responsive-group .long-text {
+    display: none;
+  }
+  .full-width-responsive-group .short-text {
+    display: inline;
+  }
+}
+
+.trip-planner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.swap-button {
+  font-size: 20px;
+  color: #8b949e;
+}
+
+@media (min-width: 480px) {
+  .trip-planner-container {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .trip-planner-container .input-group {
+    flex: 1;
+  }
+
+  .swap-button {
+    flex-shrink: 0;
+  }
+}
+
+.search-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-actions-container .n-input-group {
+  width: 100%;
+}
+.search-actions-container .n-input-group .n-input-number {
+  flex-grow: 1;
+}
+
+.search-actions-container .search-button-wrapper {
+  display: flex;
+  width: 100%;
+}
+.search-actions-container .search-button-wrapper > div {
+  flex-grow: 1;
+}
+.search-actions-container .search-button-wrapper > div > .n-button {
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .search-actions-container {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .search-actions-container .n-input-group {
+    width: auto;
+  }
+  .search-actions-container .n-input-group .n-input-number {
+    flex-grow: 0;
+  }
+
+  .search-actions-container .search-button-wrapper {
+    display: flex;
+    width: auto;
+    margin-left: auto;
+  }
+  .search-actions-container .search-button-wrapper > div {
+    flex-grow: 0;
+  }
+  .search-actions-container .search-button-wrapper > div > .n-button {
+    width: auto;
+  }
 }
 </style>
