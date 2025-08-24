@@ -418,6 +418,7 @@ import {
 } from "@vicons/ionicons5";
 import { SunnyOutline, MoonOutline } from "@vicons/ionicons5";
 import MapRenderer from "./MapRenderer.vue";
+import { pinyin } from "pinyin-pro";
 
 const swapOriginDestination = () => {
   [origin.value, destination.value] = [destination.value, origin.value];
@@ -497,20 +498,95 @@ const statusType = computed(() => {
   if (msg.includes("就绪") || msg.includes("查询条件更改")) return "success";
   return "default";
 });
-const originOptions = computed(() => {
-  const input = origin.value.toLowerCase();
+const MATCH_PRIORITY = {
+  EXACT_CN: 1,
+  START_CN: 2,
+  EXACT_PINYIN: 3,
+  START_PINYIN: 4,
+  EXACT_INITIALS: 5,
+  START_INITIALS: 6,
+  CONTAINS_CN: 20,
+  CONTAINS_PINYIN: 21,
+  CONTAINS_INITIALS: 22,
+  NO_MATCH: Infinity,
+};
+
+const getStationOptions = (inputValue) => {
+  const input = inputValue.toLowerCase().trim();
   if (!input) return [];
-  return stationNames.value
-    .filter((name) => name.toLowerCase().includes(input))
-    .map((name) => ({ label: name, value: name }));
-});
-const destinationOptions = computed(() => {
-  const input = destination.value.toLowerCase();
-  if (!input) return [];
-  return stationNames.value
-    .filter((name) => name.toLowerCase().includes(input))
-    .map((name) => ({ label: name, value: name }));
-});
+
+  const results = [];
+
+  for (const name of stationNames.value) {
+    const lowerName = name.toLowerCase();
+    let priority = MATCH_PRIORITY.NO_MATCH;
+    let matchType = "none";
+
+    try {
+      const fullPinyin = pinyin(name, { toneType: "none", type: "array" }).join(
+        ""
+      );
+      const firstLetters = pinyin(name, {
+        pattern: "first",
+        toneType: "none",
+        type: "array",
+      }).join("");
+
+      if (lowerName === input) {
+        priority = MATCH_PRIORITY.EXACT_CN;
+        matchType = "exact_cn";
+      } else if (lowerName.startsWith(input)) {
+        priority = MATCH_PRIORITY.START_CN;
+        matchType = "start_cn";
+      } else if (fullPinyin.toLowerCase() === input) {
+        priority = MATCH_PRIORITY.EXACT_PINYIN;
+        matchType = "exact_pinyin";
+      } else if (fullPinyin.toLowerCase().startsWith(input)) {
+        priority = MATCH_PRIORITY.START_PINYIN;
+        matchType = "start_pinyin";
+      } else if (firstLetters.toLowerCase() === input) {
+        priority = MATCH_PRIORITY.EXACT_INITIALS;
+        matchType = "exact_initials";
+      } else if (firstLetters.toLowerCase().startsWith(input)) {
+        priority = MATCH_PRIORITY.START_INITIALS;
+        matchType = "start_initials";
+      } else if (lowerName.includes(input)) {
+        priority = MATCH_PRIORITY.CONTAINS_CN;
+        matchType = "contains_cn";
+      } else if (
+        input.length >= 3 &&
+        fullPinyin.toLowerCase().includes(input)
+      ) {
+        priority = MATCH_PRIORITY.CONTAINS_PINYIN + 2;
+        matchType = "contains_pinyin_lax";
+      }
+
+      if (priority !== MATCH_PRIORITY.NO_MATCH) {
+        results.push({
+          name,
+          priority,
+          matchType,
+          length: name.length,
+          initials: firstLetters.toLowerCase(),
+          fullPinyin: fullPinyin.toLowerCase(),
+        });
+      }
+    } catch (e) {}
+  }
+
+  results.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    if (a.length !== b.length) return a.length - b.length;
+    return a.name.localeCompare(b.name, "zh-CN");
+  });
+
+  return results
+    .slice(0, 10)
+    .map((item) => ({ label: item.name, value: item.name }));
+};
+
+const originOptions = computed(() => getStationOptions(origin.value));
+const destinationOptions = computed(() => getStationOptions(destination.value));
 const displayedJourneys = computed(() =>
   journeys.value.slice(0, displayCount.value)
 );
@@ -582,11 +658,11 @@ const processJourney = (journey) => {
     }
     currentTime += leg.wtb;
     const departureTime = formatArrivalTime(currentTime);
-    
+
     const finalArrivalTime = currentTime + leg.r.dur;
     const finalStation = leg.r.al;
     const totalKm = leg.r.km;
-    
+
     segments.push({
       type: "success",
       train: formatTrainNumber(leg.r.tn),
