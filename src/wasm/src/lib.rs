@@ -16,13 +16,15 @@ struct RawTrain {
     tn: String,
     s: Vec<RawStop>,
 }
-#[derive(Deserialize)]
+
+#[derive(Deserialize, Clone)]
 #[allow(dead_code)]
 struct RawStop {
     n: String,
     a: i32,
     d: i32,
 }
+
 #[derive(Deserialize)]
 struct RawRdat {
     t: Vec<RawTrain>,
@@ -38,6 +40,8 @@ pub struct R {
     pub dtr: i32,
     pub dur: i32,
     pub km: i32,
+    pub leg_id: u32,
+    pub next_leg_id: Option<u32>,
 }
 
 fn ser_sid<S>(sid: &usize, ser: S) -> Result<S::Ok, S::Error>
@@ -206,22 +210,70 @@ fn cwait(arr: i32, dep: i32) -> i32 {
     }
 }
 
-fn mk_path(st: &St) -> Vec<PS> {
-    let mut segs = Vec::new();
+fn mk_p_base<StLike, F>(st: &StLike, extractor: F) -> Vec<PS>
+where
+    StLike: Clone,
+    F: Fn(&StLike) -> (Option<Rc<StLike>>, Option<R>, i32),
+{
+    let mut segs: Vec<(Rc<StLike>, R)> = Vec::new();
     let mut cur = Some(Rc::new(st.clone()));
     while let Some(c) = cur {
-        if let Some(ref r) = c.r {
-            let wtb = if let Some(ref p) = c.p {
-                (c.aat - r.dur) - p.aat
+        let (p, r_opt, _) = extractor(&c);
+        if let Some(r) = r_opt {
+            segs.push((Rc::clone(&c), r));
+        }
+        cur = p;
+    }
+    segs.reverse();
+
+    if segs.is_empty() {
+        return Vec::new();
+    }
+
+    let mut p: Vec<PS> = Vec::new();
+    let mut seg_iter = segs.into_iter();
+
+    let (mut lc, mut mr) = seg_iter.next().unwrap();
+    let (_, _, first_aat) = extractor(&lc);
+    let mut fdt = first_aat - mr.dur;
+    let mut wtb = if let Some(p_ctx) = extractor(&lc).0 {
+        fdt - extractor(&p_ctx).2
+    } else {
+        0
+    };
+
+    for (c, r) in seg_iter {
+        if mr.next_leg_id == Some(r.leg_id) {
+            mr.al = r.al;
+            mr.km += r.km;
+            mr.next_leg_id = r.next_leg_id;
+            lc = c;
+        } else {
+            let final_aat = extractor(&lc).2;
+            mr.dur = final_aat - fdt;
+            p.push(PS { wtb, r: mr });
+
+            let (_, _, cur_aat) = extractor(&c);
+            fdt = cur_aat - r.dur;
+            wtb = if let Some(p_ctx) = extractor(&c).0 {
+                fdt - extractor(&p_ctx).2
             } else {
                 0
             };
-            segs.push(PS { wtb, r: r.clone() });
+            mr = r;
+            lc = c;
         }
-        cur = c.p.clone();
     }
-    segs.reverse();
-    segs
+
+    let final_aat = extractor(&lc).2;
+    mr.dur = final_aat - fdt;
+    p.push(PS { wtb, r: mr });
+
+    p
+}
+
+fn mk_path(st: &St) -> Vec<PS> {
+    mk_p_base(st, |s| (s.p.clone(), s.r.clone(), s.aat))
 }
 
 fn mk_path_k(st: &StK) -> Vec<PS> {
@@ -281,7 +333,7 @@ pub struct SL {
 }
 
 #[wasm_bindgen]
-pub fn gts(tn: &str, from: &str, to: &str) -> Result<JsValue, JsValue> {
+pub fn gts(tn: &str, dtr: i32, atr: i32) -> Result<JsValue, JsValue> {
     let result = RDAT_MAP.with(|map_cell| {
         let map_opt = map_cell.borrow();
         let rdat_map = map_opt.as_ref().ok_or("Error: RDAT_MAP not initialized")?;
@@ -292,36 +344,38 @@ pub fn gts(tn: &str, from: &str, to: &str) -> Result<JsValue, JsValue> {
 
         let start_idx =
             rt.s.iter()
-                .position(|s| s.n == from)
-                .ok_or_else(|| format!("Station '{}' not found in train '{}'", from, tn))?;
-        let end_idx =
-            rt.s.iter()
-                .position(|s| s.n == to)
-                .ok_or_else(|| format!("Station '{}' not found in train '{}'", to, tn))?;
+                .position(|s| s.d == dtr)
+                .ok_or_else(|| format!("Start point with dtr '{}' not found", dtr))?;
 
-        if start_idx > end_idx {
-            return Err(format!(
-                "'From' station appears after 'To' station in this route"
-            ));
+        let search_slice = rt.s.get(start_idx..).unwrap_or(&[]);
+        let relative_end_idx = search_slice.iter().position(|s| s.a == atr);
+
+        if let Some(rel_idx) = relative_end_idx {
+            let end_idx = start_idx + rel_idx;
+            let seg = &rt.s[start_idx..=end_idx];
+
+            let stops: Vec<Stl> = seg
+                .iter()
+                .map(|s| {
+                    let loc = g_location(&s.n).unwrap_or(SL {
+                        lat: None,
+                        lon: None,
+                    });
+                    Stl {
+                        n: s.n.clone(),
+                        lat: loc.lat.unwrap_or(0.0),
+                        lon: loc.lon.unwrap_or(0.0),
+                    }
+                })
+                .collect();
+
+            serde_json::to_string(&stops).map_err(|e| format!("Serialization error: {}", e))
+        } else {
+            Err(format!(
+                "End point with atr '{}' not found after start point with dtr '{}'",
+                atr, dtr
+            ))
         }
-
-        let stations_segment = &rt.s[start_idx..=end_idx];
-        let result_stops: Vec<Stl> = stations_segment
-            .iter()
-            .map(|s| {
-                let location = g_location(&s.n).unwrap_or(SL {
-                    lat: None,
-                    lon: None,
-                });
-                Stl {
-                    n: s.n.clone(),
-                    lat: location.lat.unwrap_or(0.0),
-                    lon: location.lon.unwrap_or(0.0),
-                }
-            })
-            .collect();
-
-        serde_json::to_string(&result_stops).map_err(|e| format!("Serialization error: {}", e))
     });
 
     match result {
@@ -389,11 +443,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
     }
 
     let mut i = 0;
-    let mut max_pq_size = 0;
-
     while let Some(c) = pq.pop() {
-        max_pq_size = max_pq_size.max(pq.len() + 1);
-        
         i += 1;
         if i % 10000 == 0 {
             sleep(0).await?;
@@ -437,11 +487,13 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
                 if is_stopped() {
                     break;
                 }
+
                 let is_cont = if let Some(ref prev_r) = c.r {
-                    prev_r.tn == next_r.tn
+                    prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
                     false
                 };
+
                 let mut wait = cwait(c.aat % 1440, next_r.dtr % 1440);
 
                 if !is_cont {
@@ -478,9 +530,6 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
             }
         }
     }
-
-    web_sys::console::log_1(&format!("'max pq size: {}, max v size: {}", max_pq_size, v.len()).into());
-
     Ok(())
 }
 
@@ -496,21 +545,7 @@ struct StMx {
 }
 
 fn mk_path_mx(st: &StMx) -> Vec<PS> {
-    let mut segs = Vec::new();
-    let mut cur = Some(Rc::new(st.clone()));
-    while let Some(c) = cur {
-        if let Some(ref r) = c.r {
-            let wtb = if let Some(ref p) = c.p {
-                (c.aat - r.dur) - p.aat
-            } else {
-                0
-            };
-            segs.push(PS { wtb, r: r.clone() });
-        }
-        cur = c.p.clone();
-    }
-    segs.reverse();
-    segs
+    mk_p_base(st, |s| (s.p.clone(), s.r.clone(), s.aat))
 }
 
 #[wasm_bindgen(js_name = find_mx)]
@@ -530,7 +565,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
     };
 
     let mut q = VecDeque::with_capacity(50000);
-    let mut visited: HashMap<(usize, String), i32> = HashMap::with_capacity(10000);
+    let mut visited: HashMap<(usize, u32), i32> = HashMap::with_capacity(10000);
 
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
@@ -569,12 +604,12 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
         }
 
         if let Some(r) = &c.r {
-            if let Some(&prev_x) = visited.get(&(c.sid, r.tn.clone())) {
+            if let Some(&prev_x) = visited.get(&(c.sid, r.leg_id)) {
                 if prev_x <= c.x {
                     continue;
                 }
             }
-            visited.insert((c.sid, r.tn.clone()), c.x);
+            visited.insert((c.sid, r.leg_id), c.x);
         }
 
         if dset.contains(&c.sid) {
@@ -599,11 +634,13 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
                 if is_stopped() {
                     break;
                 }
+
                 let is_cont = if let Some(ref prev_r) = c.r {
-                    prev_r.tn == next_r.tn
+                    prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
                     false
                 };
+
                 let new_x = if is_cont { c.x } else { c.x + 1 };
 
                 if new_x > min_found_x {
@@ -651,7 +688,6 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
             }
         }
     }
-
     Ok(())
 }
 

@@ -160,7 +160,7 @@ function formatTrainNumber(trainNumber) {
 function fat(am) {
     if (am === null) return "N/A";
     const day = Math.floor(am / 1440), rem = am % 1440, h = Math.floor(rem / 60), m = rem % 60;
-    return `第${day + 1}天 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    return `第 ${day + 1} 天 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
 function calx(p) {
@@ -183,33 +183,31 @@ async function gjd(j) {
         }
 
         ct += ps.wtb;
-        const bts = fat(ct).slice(-5), ss = r.bs;
+        const bts = fat(ct), ss = r.bs;
         ct += r.dur;
-        let fat_v = ct;
+        
+        const fs = r.al;
+        const seg_km = r.km;
 
-        let fs = r.al;
-        let seg_km = r.km;
-
-        let k = i + 1;
-        while (k < j.p.length && j.p[k].r.tn === r.tn) {
-            const ns = j.p[k];
-            fat_v += ns.wtb + ns.r.dur;
-            fs = ns.r.al;
-            seg_km += ns.r.km;
-            k++;
-        }
-
-        const fats = fat(fat_v).slice(-5);
+        const fats = fat(ct);
         const is_nd = isnd(r.tn);
         const tstyle = is_nd ? ' style="color: red;"' : '';
         const formattedTrainNumber = formatTrainNumber(r.tn);
 
-        const km_info = `<span style="font-size: smaller; color: #888;"> (${seg_km}公里)</span>`;
-        const details = mode === 'km' ? `${ss} → ${fs}${km_info}` : `${ss} ${bts} → ${fs} ${fats}${km_info}`;
+        const km_info = mode === 'km' ? `<span style="font-size: smaller; color: #888;"> (${seg_km}公里)</span>` : '';
+        
+        let details;
+        if (mode === 'km') {
+            details = `${ss} → ${fs}${km_info}`;
+        } else {
+            details = `<div style="font-size: 15px; margin-bottom: 4px;"><strong${tstyle}>${formattedTrainNumber}</strong> ${ss} → ${fs}</div><div style="font-size: 13px; color: #666;">${bts} → ${fats}${km_info}</div>`;
+        }
 
         if (document.getElementById('show_stations').checked) {
             try {
-                const stops = await gts(r.tn, ss, fs);
+                const dtr = r.dtr;
+                const atr = r.dtr + r.dur;
+                const stops = await gts(r.tn, dtr, atr);
                 const snames = stops.map(stop => stop.n);
                 const usns = [];
                 for (const sn of snames) {
@@ -219,17 +217,12 @@ async function gjd(j) {
                 }
                 all_sns.push(...usns);
                 tstps.push(...stops);
-                h += `<li><strong${tstyle}>${formattedTrainNumber}:</strong> ${details}</li>`;
+                h += `<li>${details}</li>`;
             } catch (e) {
-                h += `<li><strong${tstyle}>${formattedTrainNumber}:</strong> ${details}</li>`;
+                h += `<li>${details}</li>`;
             }
         } else {
-            h += `<li><strong${tstyle}>${formattedTrainNumber}:</strong> ${details}</li>`;
-        }
-
-        if (k > i + 1) {
-            ct = fat_v;
-            i = k - 1;
+            h += `<li>${details}</li>`;
         }
     }
     j.allStations = [...new Set(all_sns)];
@@ -291,7 +284,7 @@ function stp_s() {
     f_s();
 }
 
-function gts(n, f, t) {
+function gts(n, dtr, atr) {
     if (w) {
         const rid = Date.now() + Math.random();
         const p = new Promise((res, rej) => {
@@ -303,7 +296,7 @@ function gts(n, f, t) {
                 }
             }, 10000);
         });
-        w.postMessage({ t: 'gts', requestId: rid, d: { n, f, t } });
+        w.postMessage({ t: 'gts', requestId: rid, d: { n, dtr, atr } });
         return p;
     }
     return Promise.reject(new Error('Worker not initialized'));

@@ -583,18 +583,12 @@ const processJourney = (journey) => {
       });
     }
     currentTime += leg.wtb;
-    const departureTime = formatArrivalTime(currentTime).slice(-5);
-    let k = i;
-    let finalArrivalTime = currentTime + leg.r.dur;
-    let finalStation = leg.r.al;
-    let totalKm = leg.r.km;
-    while (k + 1 < raw.p.length && raw.p[k + 1].r.tn === leg.r.tn) {
-      k++;
-      const nextLeg = raw.p[k];
-      finalArrivalTime += nextLeg.wtb + nextLeg.r.dur;
-      finalStation = nextLeg.r.al;
-      totalKm += nextLeg.r.km;
-    }
+    const departureTime = formatArrivalTime(currentTime);
+    
+    const finalArrivalTime = currentTime + leg.r.dur;
+    const finalStation = leg.r.al;
+    const totalKm = leg.r.km;
+    
     segments.push({
       type: "success",
       train: formatTrainNumber(leg.r.tn),
@@ -603,18 +597,15 @@ const processJourney = (journey) => {
       details:
         journey.searchMode === "km"
           ? `${totalKm}公里`
-          : `${departureTime} → ${formatArrivalTime(finalArrivalTime).slice(
-              -5
-            )}`,
+          : `${departureTime} → ${formatArrivalTime(finalArrivalTime)}`,
       color: "#2ea043",
       isNonDaily: nonDailyTrains.includes(leg.r.tn),
     });
     currentTime = finalArrivalTime;
-    i = k;
   }
   return segments;
 };
-const getTrainStops = (trainNumber, fromStation, toStation) => {
+const getTrainStops = (trainNumber, departureTime, arrivalTime) => {
   const requestId = Date.now() + Math.random();
   const promise = new Promise((resolve, reject) => {
     gtsPromiseMap.set(requestId, { resolve, reject });
@@ -628,7 +619,7 @@ const getTrainStops = (trainNumber, fromStation, toStation) => {
   w.postMessage({
     t: "gts",
     requestId,
-    d: { n: trainNumber, f: fromStation, t: toStation },
+    d: { n: trainNumber, dtr: departureTime, atr: arrivalTime },
   });
   return promise;
 };
@@ -643,20 +634,15 @@ const handleExpandJourney = async (journey) => {
   journey.stationsError = null;
   try {
     const allStopsArrays = [];
+    let currentTime = rawJourney.idt;
     for (let i = 0; i < rawJourney.p.length; i++) {
       const leg = rawJourney.p[i];
-      let k = i;
-      let finalStation = leg.r.al;
-      while (
-        k + 1 < rawJourney.p.length &&
-        rawJourney.p[k + 1].r.tn === leg.r.tn
-      ) {
-        k++;
-        finalStation = rawJourney.p[k].r.al;
-      }
-      const stops = await getTrainStops(leg.r.tn, leg.r.bs, finalStation);
+      currentTime += leg.wtb;
+      const departureTime = leg.r.dtr;
+      const arrivalTime = leg.r.dtr + leg.r.dur;
+      const stops = await getTrainStops(leg.r.tn, departureTime, arrivalTime);
       allStopsArrays.push(stops);
-      i = k;
+      currentTime = arrivalTime;
     }
     const allStops = allStopsArrays.flat();
     const uniqueStops = [];

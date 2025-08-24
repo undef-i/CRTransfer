@@ -55,6 +55,8 @@ struct R {
     dtr: i32,
     dur: i32,
     km: i32,
+    leg_id: u32,
+    next_leg_id: Option<u32>,
 }
 
 #[derive(Serialize)]
@@ -89,10 +91,22 @@ fn main() {
     let rdat_root: RawRdat = serde_json::from_str(&rdat_str).expect("Failed to parse rdat.json");
     let mut dat: HashMap<usize, Vec<R>> = HashMap::new();
 
+    let mut global_leg_id_counter: u32 = 0;
+
     for train in rdat_root.t {
         for i in 0..(train.s.len().saturating_sub(1)) {
             let b = &train.s[i];
             let a = &train.s[i + 1];
+
+            let current_leg_id = global_leg_id_counter;
+            let next_leg_id = if i + 1 < train.s.len() - 1 {
+                Some(global_leg_id_counter + 1)
+            } else {
+                None
+            };
+
+            global_leg_id_counter += 1;
+
             if b.d != -1 && a.a != -1 && a.a > b.d {
                 if a.km > b.km {
                     let b_sid = get_sid(&b.n, &mut s2i, &mut i2s);
@@ -104,6 +118,8 @@ fn main() {
                         dtr: b.d,
                         dur: a.a - b.d,
                         km: a.km - b.km,
+                        leg_id: current_leg_id,
+                        next_leg_id,
                     });
                 }
             }

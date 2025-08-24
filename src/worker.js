@@ -100,7 +100,7 @@ self.onmessage = async function (e) {
             self.postMessage({ t: 'stn', d: stns });
         } else if (t === 'gts') {
             try {
-                const stopsJson = wm.gts(d.n, d.f, d.t);
+                const stopsJson = wm.gts(d.n, d.dtr, d.atr);
                 const stops = JSON.parse(stopsJson);
                 self.postMessage({ t: 'ts', d: stops, requestId: requestId });
             } catch (err) {
