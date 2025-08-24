@@ -45,6 +45,7 @@ struct RawScdat {
 struct SL {
     lat: Option<f64>,
     lon: Option<f64>,
+    rn: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

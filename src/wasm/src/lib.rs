@@ -324,12 +324,14 @@ pub struct Stl {
     pub n: String,
     pub lat: f64,
     pub lon: f64,
+    pub rn: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SL {
     pub lat: Option<f64>,
     pub lon: Option<f64>,
+    pub rn: Option<Vec<String>>,
 }
 
 #[wasm_bindgen]
@@ -360,11 +362,13 @@ pub fn gts(tn: &str, dtr: i32, atr: i32) -> Result<JsValue, JsValue> {
                     let loc = g_location(&s.n).unwrap_or(SL {
                         lat: None,
                         lon: None,
+                        rn: None,
                     });
                     Stl {
                         n: s.n.clone(),
                         lat: loc.lat.unwrap_or(0.0),
                         lon: loc.lon.unwrap_or(0.0),
+                        rn: loc.rn.unwrap_or_default(),
                     }
                 })
                 .collect();

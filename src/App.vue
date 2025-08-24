@@ -339,13 +339,31 @@
                   <div
                     v-else-if="journey.allStops && journey.allStops.length > 0"
                   >
+                    <div style="margin-bottom: 12px;">
                     <n-text
                       depth="3"
-                      style="margin-bottom: 12px; display: block"
-                      >{{
-                        journey.allStops.map((s) => s.n).join(" → ")
-                      }}</n-text
+                      style="display: block; line-height: 1.6;"
                     >
+                      <span
+                        v-for="(stop, index) in journey.allStops"
+                        :key="stop.n"
+                        style="display: inline-flex; align-items: center; flex-wrap: wrap;"
+                      >
+                        {{ stop.n }}
+                        <n-tag
+                          v-for="line in stop.rn"
+                          :key="line"
+                          size="tiny"
+                          type="success"
+                          :bordered="false"
+                          style="margin-left: 4px; margin-right: 4px; font-size: 10px; padding: 1px 6px;"
+                        >
+                          {{ line }}
+                        </n-tag>
+                        <span v-if="index < journey.allStops.length - 1" style="margin: 0 4px;">→</span>
+                      </span>
+                    </n-text>
+                  </div>
                     <MapRenderer :stops="journey.allStops" />
                   </div>
                   <n-empty
