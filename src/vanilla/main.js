@@ -160,7 +160,7 @@ function formatTrainNumber(trainNumber) {
 function fat(am) {
     if (am === null) return "N/A";
     const day = Math.floor(am / 1440), rem = am % 1440, h = Math.floor(rem / 60), m = rem % 60;
-    return `第 ${day + 1} 天 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    return `第${day + 1}天 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
 function calx(p) {
@@ -194,14 +194,8 @@ async function gjd(j) {
         const tstyle = is_nd ? ' style="color: red;"' : '';
         const formattedTrainNumber = formatTrainNumber(r.tn);
 
-        const km_info = mode === 'km' ? `<span style="font-size: smaller; color: #888;"> (${seg_km}公里)</span>` : '';
-        
-        let details;
-        if (mode === 'km') {
-            details = `${ss} → ${fs}${km_info}`;
-        } else {
-            details = `<div style="font-size: 15px; margin-bottom: 4px;"><strong${tstyle}>${formattedTrainNumber}</strong> ${ss} → ${fs}</div><div style="font-size: 13px; color: #666;">${bts} → ${fats}${km_info}</div>`;
-        }
+        const km_info = `<span style="font-size: smaller; color: #888;"> (${seg_km}公里)</span>`;
+        const details = mode === 'km' ? `${ss} → ${fs}${km_info}` : `${ss} ${bts} → ${fs} ${fats}${km_info}`;
 
         if (document.getElementById('show_stations').checked) {
             try {
@@ -217,12 +211,12 @@ async function gjd(j) {
                 }
                 all_sns.push(...usns);
                 tstps.push(...stops);
-                h += `<li>${details}</li>`;
+                h += `<li><strong${tstyle}>${formattedTrainNumber}:</strong> ${details}</li>`;
             } catch (e) {
-                h += `<li>${details}</li>`;
+                h += `<li><strong${tstyle}>${formattedTrainNumber}:</strong> ${details}</li>`;
             }
         } else {
-            h += `<li>${details}</li>`;
+            h += `<li><strong${tstyle}>${formattedTrainNumber}:</strong> ${details}</li>`;
         }
     }
     j.allStations = [...new Set(all_sns)];

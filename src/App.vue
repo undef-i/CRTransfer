@@ -280,21 +280,19 @@
                   </div>
 
                   <div v-else class="segment-content">
-                    <div class="segment-part segment-train">
-                      <n-text strong style="font-size: 16px">{{
-                        segment.train
-                      }}</n-text>
-                      <n-tag
-                        v-if="segment.isNonDaily"
-                        type="error"
-                        size="small"
-                        round
-                        >非每日</n-tag
-                      >
-                    </div>
-
                     <div class="segment-part segment-route">
-                      <n-text style="font-size: 15px"
+                      <n-text strong style="font-size: 15px">
+                        <span>{{ segment.train }}</span>
+                        <n-tag
+                          v-if="segment.isNonDaily"
+                          type="error"
+                          size="small"
+                          round
+                          style="margin-left: 8px"
+                          >非每日</n-tag
+                        >
+                      </n-text>
+                      <n-text style="font-size: 15px; margin-left: 8px"
                         >{{ segment.from }} → {{ segment.to }}</n-text
                       >
                     </div>
@@ -303,7 +301,7 @@
                       <n-text
                         depth="3"
                         style="font-size: 13px; white-space: nowrap"
-                        >({{ segment.details }})</n-text
+                        >{{ segment.details }}</n-text
                       >
                     </div>
                   </div>
@@ -524,10 +522,10 @@ const formatDuration = (m) => {
     h = Math.floor(rem / 60),
     mins = rem % 60;
   let p = [];
-  if (d > 0) p.push(`${d}天`);
-  if (h > 0) p.push(`${h}小时`);
-  if (mins > 0) p.push(`${mins}分钟`);
-  return p.length > 0 ? p.join(" ") : "0分钟";
+  if (d > 0) p.push(`${d} 天`);
+  if (h > 0) p.push(`${h} 小时`);
+  if (mins > 0) p.push(`${mins} 分钟`);
+  return p.length > 0 ? p.join(" ") : "0 分钟";
 };
 const formatArrivalTime = (am) => {
   if (am === null) return "N/A";
@@ -535,7 +533,7 @@ const formatArrivalTime = (am) => {
     rem = am % 1440,
     h = Math.floor(rem / 60),
     m = rem % 60;
-  return `第${day + 1}天 ${h.toString().padStart(2, "0")}:${m
+  return `第 ${day + 1} 天 ${h.toString().padStart(2, "0")}:${m
     .toString()
     .padStart(2, "0")}`;
 };
