@@ -2,6 +2,16 @@
 
 铁路换乘查询工具，使用 Dijkstra 算法计算某两个车站之间最快的换乘方式。
 
+## 使用
+
+访问 https://crtransfer.noxylva.org/ 
+
+
+## 构建
+
+```
+npm run build
+```
 
 ## 已知问题
 
