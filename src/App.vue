@@ -339,31 +339,44 @@
                   <div
                     v-else-if="journey.allStops && journey.allStops.length > 0"
                   >
-                    <div style="margin-bottom: 12px;">
-                    <n-text
-                      depth="3"
-                      style="display: block; line-height: 1.6;"
-                    >
-                      <span
-                        v-for="(stop, index) in journey.allStops"
-                        :key="stop.n"
-                        style="display: inline-flex; align-items: center; flex-wrap: wrap;"
+                    <div style="margin-bottom: 12px">
+                      <n-text
+                        depth="3"
+                        style="display: block; line-height: 1.6"
                       >
-                        {{ stop.n }}
-                        <n-tag
-                          v-for="line in stop.rn"
-                          :key="line"
-                          size="tiny"
-                          type="success"
-                          :bordered="false"
-                          style="margin-left: 4px; margin-right: 4px; font-size: 10px; padding: 1px 6px;"
+                        <span
+                          v-for="(stop, index) in journey.allStops"
+                          :key="stop.n"
+                          style="
+                            display: inline-flex;
+                            align-items: center;
+                            flex-wrap: wrap;
+                          "
                         >
-                          {{ line }}
-                        </n-tag>
-                        <span v-if="index < journey.allStops.length - 1" style="margin: 0 4px;">→</span>
-                      </span>
-                    </n-text>
-                  </div>
+                          {{ stop.n }}
+                          <n-tag
+                            v-for="line in stop.rn"
+                            :key="line"
+                            size="tiny"
+                            type="success"
+                            :bordered="false"
+                            style="
+                              margin-left: 4px;
+                              margin-right: 4px;
+                              font-size: 10px;
+                              padding: 1px 6px;
+                            "
+                          >
+                            {{ line }}
+                          </n-tag>
+                          <span
+                            v-if="index < journey.allStops.length - 1"
+                            style="margin: 0 4px"
+                            >→</span
+                          >
+                        </span>
+                      </n-text>
+                    </div>
                     <MapRenderer :stops="journey.allStops" />
                   </div>
                   <n-empty
@@ -437,6 +450,138 @@ import {
 import { SunnyOutline, MoonOutline } from "@vicons/ionicons5";
 import MapRenderer from "./MapRenderer.vue";
 import { pinyin } from "pinyin-pro";
+
+const processedStations = ref([]);
+
+function getCommonPrefixLength(str1, str2) {
+  let i = 0;
+  while (i < str1.length && i < str2.length && str1[i] === str2[i]) {
+    i++;
+  }
+  return i;
+}
+
+function damerauLevenshteinDistance(a, b) {
+  const d = [];
+  const lenA = a.length;
+  const lenB = b.length;
+
+  for (let i = 0; i <= lenA; i++) {
+    d[i] = [];
+    d[i][0] = i;
+  }
+  for (let j = 0; j <= lenB; j++) {
+    d[0][j] = j;
+  }
+
+  for (let i = 1; i <= lenA; i++) {
+    for (let j = 1; j <= lenB; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(
+        d[i - 1][j] + 1,
+        d[i][j - 1] + 1,
+        d[i - 1][j - 1] + cost
+      );
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return d[lenA][lenB];
+}
+
+function calculateMatchScore(query, stationEntry) {
+  let score = 0;
+  let queryIndex = 0;
+  let continuousBonus = 0;
+
+  for (let i = 0; i < stationEntry.pinyin_array.length; i++) {
+    const fullPinyin = stationEntry.pinyin_array[i];
+    const initial = stationEntry.initials_array[i];
+
+    if (queryIndex >= query.length) {
+      score += 5;
+      break;
+    }
+
+    const remainingQuery = query.substring(queryIndex);
+
+    if (remainingQuery.startsWith(fullPinyin)) {
+      queryIndex += fullPinyin.length;
+      score += 10;
+      score += continuousBonus * 5;
+      continuousBonus++;
+    } else if (remainingQuery.startsWith(initial)) {
+      queryIndex += initial.length;
+      score += 2;
+      continuousBonus = 0;
+    } else {
+      return 0;
+    }
+  }
+
+  if (queryIndex < query.length) {
+    return 0;
+  }
+
+  return score;
+}
+
+const preprocessStations = () => {
+  if (stationNames.value.length === 0) return;
+  console.log("Preprocessing station data with alias model...");
+
+  const result = stationNames.value.flatMap((name) => {
+    try {
+      const originalPinyinArray = pinyin(name, {
+        toneType: "none",
+        type: "array",
+      });
+      const originalInitialsArray = pinyin(name, {
+        pattern: "first",
+        toneType: "none",
+        type: "array",
+      });
+      const originalEntry = {
+        name: name,
+        isAlias: false,
+        pinyin: originalPinyinArray.join(""),
+        initials: originalInitialsArray.join(""),
+        pinyin_array: originalPinyinArray,
+        initials_array: originalInitialsArray,
+      };
+
+      const aliasName = name + "站";
+      const aliasPinyinArray = pinyin(aliasName, {
+        toneType: "none",
+        type: "array",
+      });
+      const aliasInitialsArray = pinyin(aliasName, {
+        pattern: "first",
+        toneType: "none",
+        type: "array",
+      });
+      const aliasEntry = {
+        name: name,
+        isAlias: true,
+        pinyin: aliasPinyinArray.join(""),
+        initials: aliasInitialsArray.join(""),
+        pinyin_array: aliasPinyinArray,
+        initials_array: aliasInitialsArray,
+      };
+
+      return [originalEntry, aliasEntry];
+    } catch (e) {
+      console.error(`Error processing station "${name}":`, e);
+      return [];
+    }
+  });
+
+  processedStations.value = result;
+  console.log(
+    `Preprocessing complete. Generated ${result.length} searchable entries.`
+  );
+};
 
 const swapOriginDestination = () => {
   [origin.value, destination.value] = [destination.value, origin.value];
@@ -516,89 +661,92 @@ const statusType = computed(() => {
   if (msg.includes("就绪") || msg.includes("查询条件更改")) return "success";
   return "default";
 });
-const MATCH_PRIORITY = {
-  EXACT_CN: 1,
-  START_CN: 2,
-  EXACT_PINYIN: 3,
-  START_PINYIN: 4,
-  EXACT_INITIALS: 5,
-  START_INITIALS: 6,
-  CONTAINS_CN: 20,
-  CONTAINS_PINYIN: 21,
-  CONTAINS_INITIALS: 22,
-  NO_MATCH: Infinity,
-};
 
 const getStationOptions = (inputValue) => {
-  const input = inputValue.toLowerCase().trim();
+  const input = inputValue.trim();
   if (!input) return [];
 
-  const results = [];
+  const scoredResults = new Map();
+  const containsChinese = /[\u4e00-\u9fa5]/.test(input);
+  const lowerCaseInput = input.toLowerCase();
 
-  for (const name of stationNames.value) {
-    const lowerName = name.toLowerCase();
-    let priority = MATCH_PRIORITY.NO_MATCH;
-    let matchType = "none";
+  for (const stationEntry of processedStations.value) {
+    let maxScore = 0;
 
-    try {
-      const fullPinyin = pinyin(name, { toneType: "none", type: "array" }).join(
-        ""
-      );
-      const firstLetters = pinyin(name, {
-        pattern: "first",
-        toneType: "none",
-        type: "array",
-      }).join("");
-
-      if (lowerName === input) {
-        priority = MATCH_PRIORITY.EXACT_CN;
-        matchType = "exact_cn";
-      } else if (lowerName.startsWith(input)) {
-        priority = MATCH_PRIORITY.START_CN;
-        matchType = "start_cn";
-      } else if (fullPinyin.toLowerCase() === input) {
-        priority = MATCH_PRIORITY.EXACT_PINYIN;
-        matchType = "exact_pinyin";
-      } else if (fullPinyin.toLowerCase().startsWith(input)) {
-        priority = MATCH_PRIORITY.START_PINYIN;
-        matchType = "start_pinyin";
-      } else if (firstLetters.toLowerCase() === input) {
-        priority = MATCH_PRIORITY.EXACT_INITIALS;
-        matchType = "exact_initials";
-      } else if (firstLetters.toLowerCase().startsWith(input)) {
-        priority = MATCH_PRIORITY.START_INITIALS;
-        matchType = "start_initials";
-      } else if (lowerName.includes(input)) {
-        priority = MATCH_PRIORITY.CONTAINS_CN;
-        matchType = "contains_cn";
-      } else if (
-        input.length >= 3 &&
-        fullPinyin.toLowerCase().includes(input)
-      ) {
-        priority = MATCH_PRIORITY.CONTAINS_PINYIN + 2;
-        matchType = "contains_pinyin_lax";
+    if (containsChinese) {
+      if (stationEntry.name.includes(input)) {
+        if (stationEntry.name.startsWith(input)) {
+          maxScore = 200 + (stationEntry.name === input ? 50 : 0);
+        } else {
+          maxScore = 50;
+        }
+      }
+    } else {
+      if (stationEntry.initials === lowerCaseInput) {
+        maxScore = 250;
+      } else if (stationEntry.pinyin === lowerCaseInput) {
+        maxScore = 200;
       }
 
-      if (priority !== MATCH_PRIORITY.NO_MATCH) {
-        results.push({
-          name,
-          priority,
-          matchType,
-          length: name.length,
-          initials: firstLetters.toLowerCase(),
-          fullPinyin: fullPinyin.toLowerCase(),
+      if (maxScore === 0) {
+        const intentScore = calculateMatchScore(lowerCaseInput, stationEntry);
+        if (intentScore > 0) {
+          maxScore = 100 + intentScore;
+        }
+      }
+
+      if (maxScore < 100) {
+        const fullPinyinDistance = damerauLevenshteinDistance(
+          lowerCaseInput,
+          stationEntry.pinyin
+        );
+        if (fullPinyinDistance <= 3) {
+          const prefixLength = getCommonPrefixLength(
+            lowerCaseInput,
+            stationEntry.pinyin
+          );
+          let score = prefixLength * 8 - fullPinyinDistance * 10;
+          if (score > maxScore) maxScore = score;
+        }
+      }
+
+      if (maxScore < 50) {
+        const initialsDistance = damerauLevenshteinDistance(
+          lowerCaseInput,
+          stationEntry.initials
+        );
+        if (initialsDistance <= 2) {
+          const prefixLength = getCommonPrefixLength(
+            lowerCaseInput,
+            stationEntry.initials
+          );
+          let score = prefixLength * 5 - initialsDistance * 5;
+          if (score > maxScore) maxScore = score;
+        }
+      }
+    }
+
+    if (maxScore > 0) {
+      if (stationEntry.isAlias) {
+        maxScore -= 1;
+      }
+
+      if (
+        !scoredResults.has(stationEntry.name) ||
+        maxScore > scoredResults.get(stationEntry.name).score
+      ) {
+        scoredResults.set(stationEntry.name, {
+          name: stationEntry.name,
+          score: maxScore,
         });
       }
-    } catch (e) {}
+    }
   }
 
-  results.sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority - b.priority;
-    if (a.length !== b.length) return a.length - b.length;
-    return a.name.localeCompare(b.name, "zh-CN");
-  });
+  const finalResults = Array.from(scoredResults.values());
+  finalResults.sort((a, b) => b.score - a.score);
 
-  return results
+  return finalResults
     .slice(0, 10)
     .map((item) => ({ label: item.name, value: item.name }));
 };
@@ -736,16 +884,22 @@ const handleExpandJourney = async (journey) => {
       allStopsArrays.push(stops);
       currentTime = arrivalTime;
     }
-    const allStops = allStopsArrays.flat();
-    const uniqueStops = [];
-    const seenStationNames = new Set();
-    allStops.forEach((stop) => {
-      if (!seenStationNames.has(stop.n)) {
-        seenStationNames.add(stop.n);
-        uniqueStops.push(stop);
-      }
-    });
-    journey.allStops = uniqueStops;
+
+    if (allStopsArrays.length > 0) {
+      const finalRouteStops = allStopsArrays.reduce(
+        (accumulator, currentStops, index) => {
+          if (index === 0) {
+            return currentStops;
+          } else {
+            return accumulator.concat(currentStops.slice(1));
+          }
+        },
+        []
+      );
+      journey.allStops = finalRouteStops;
+    } else {
+      journey.allStops = [];
+    }
   } catch (e) {
     console.error("获取途径站点失败:", e);
     journey.stationsError = `无法加载站点数据: ${e.message}`;
@@ -753,6 +907,7 @@ const handleExpandJourney = async (journey) => {
     journey.stationsLoading = false;
   }
 };
+
 const initWorker = () => {
   if (w) return;
   w = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
@@ -939,6 +1094,16 @@ watch([mode, mtt, escOrigin, escDestination], () => {
     statusMessage.value = "查询条件更改，重新搜索";
   }
 });
+
+watch(
+  stationNames,
+  (newNames) => {
+    if (newNames && newNames.length > 0) {
+      preprocessStations();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style>
