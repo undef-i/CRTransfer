@@ -532,6 +532,39 @@ function calculateMatchScore(query, stationEntry) {
   return score;
 }
 
+function getScoreForPinyinQuery(pinyinQuery, stationEntry) {
+  let score = 0;
+
+  const intentScore = calculateMatchScore(pinyinQuery, stationEntry);
+  if (intentScore > 0) {
+    score = 100 + intentScore;
+  }
+
+  const distance = damerauLevenshteinDistance(pinyinQuery, stationEntry.pinyin);
+  if (distance <= 3) {
+    const prefixLength = getCommonPrefixLength(
+      pinyinQuery,
+      stationEntry.pinyin
+    );
+
+    let fuzzyScore = 90 - distance * 20 + prefixLength * 2;
+    if (fuzzyScore > score) {
+      score = fuzzyScore;
+    }
+  }
+
+  if (stationEntry.pinyin === pinyinQuery) {
+    score = Math.max(score, 200);
+  }
+
+  if (stationEntry.initials === pinyinQuery) {
+    const initialsScore = 60;
+    score = Math.max(score, initialsScore);
+  }
+
+  return score;
+}
+
 const preprocessStations = () => {
   if (stationNames.value.length === 0) return;
   const result = stationNames.value.flatMap((name) => {
@@ -714,67 +747,63 @@ const getStationOptions = (inputValue) => {
   const containsChinese = /[\u4e00-\u9fa5]/.test(input);
   const lowerCaseInput = input.toLowerCase();
 
+  let inputPinyin = "";
+  let inputInitials = "";
+  if (containsChinese) {
+    try {
+      inputPinyin = pinyin(input, { toneType: "none", type: "array" }).join("");
+      inputInitials = pinyin(input, {
+        pattern: "first",
+        toneType: "none",
+        type: "array",
+      }).join("");
+    } catch (e) {
+      console.error("Pinyin conversion failed for input:", input, e);
+    }
+  }
+
   for (const stationEntry of processedStations.value) {
     let maxScore = 0;
 
     if (containsChinese) {
+      let hanziMatchScore = 0;
       if (stationEntry.name.includes(input)) {
         if (stationEntry.name.startsWith(input)) {
-          maxScore = 200 + (stationEntry.name === input ? 50 : 0);
+          hanziMatchScore = 200 + (stationEntry.name === input ? 50 : 0);
         } else {
-          maxScore = 50;
+          hanziMatchScore = 50;
         }
       }
+
+      let homophoneMatchScore = 0;
+      if (inputPinyin) {
+        const rawScoreFromPinyin = getScoreForPinyinQuery(
+          inputPinyin,
+          stationEntry
+        );
+        const rawScoreFromInitials = getScoreForPinyinQuery(
+          inputInitials,
+          stationEntry
+        );
+        const rawHomophoneScore = Math.max(
+          rawScoreFromPinyin,
+          rawScoreFromInitials
+        );
+
+        if (rawHomophoneScore > 0) {
+          homophoneMatchScore = rawHomophoneScore * 0.2;
+        }
+      }
+
+      maxScore = Math.max(hanziMatchScore, homophoneMatchScore);
     } else {
-      if (stationEntry.initials === lowerCaseInput) {
-        maxScore = 250;
-      } else if (stationEntry.pinyin === lowerCaseInput) {
-        maxScore = 200;
-      }
-
-      if (maxScore === 0) {
-        const intentScore = calculateMatchScore(lowerCaseInput, stationEntry);
-        if (intentScore > 0) {
-          maxScore = 100 + intentScore;
-        }
-      }
-
-      if (maxScore < 100) {
-        const fullPinyinDistance = damerauLevenshteinDistance(
-          lowerCaseInput,
-          stationEntry.pinyin
-        );
-        if (fullPinyinDistance <= 3) {
-          const prefixLength = getCommonPrefixLength(
-            lowerCaseInput,
-            stationEntry.pinyin
-          );
-          let score = prefixLength * 8 - fullPinyinDistance * 10;
-          if (score > maxScore) maxScore = score;
-        }
-      }
-
-      if (maxScore < 50) {
-        const initialsDistance = damerauLevenshteinDistance(
-          lowerCaseInput,
-          stationEntry.initials
-        );
-        if (initialsDistance <= 2) {
-          const prefixLength = getCommonPrefixLength(
-            lowerCaseInput,
-            stationEntry.initials
-          );
-          let score = prefixLength * 5 - initialsDistance * 5;
-          if (score > maxScore) maxScore = score;
-        }
-      }
+      maxScore = getScoreForPinyinQuery(lowerCaseInput, stationEntry);
     }
 
     if (maxScore > 0) {
       if (stationEntry.isAlias) {
         maxScore -= 1;
       }
-
       if (
         !scoredResults.has(stationEntry.name) ||
         maxScore > scoredResults.get(stationEntry.name).score
