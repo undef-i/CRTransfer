@@ -403,7 +403,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, provide } from "vue";
 import {
   darkTheme,
   NConfigProvider,
@@ -529,8 +529,6 @@ function calculateMatchScore(query, stationEntry) {
 
 const preprocessStations = () => {
   if (stationNames.value.length === 0) return;
-  console.log("Preprocessing station data with alias model...");
-
   const result = stationNames.value.flatMap((name) => {
     try {
       const originalPinyinArray = pinyin(name, {
@@ -609,7 +607,40 @@ const toggleTheme = () => {
   localStorage.setItem("theme-updated", Date.now().toString());
 };
 
-onMounted(() => {
+const isChinaUser = ref(false);
+
+async function checkChinaUser() {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+    try {
+      const response = await fetch("https://ipapi.co/json/", {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        const country = data.country || data.country_code || "";
+        const isChina =
+          country.toLowerCase() === "cn" || country.toLowerCase() === "china";
+        return isChina;
+      }
+    } catch (e) {
+      clearTimeout(timeoutId);
+    }
+
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+onMounted(async () => {
   const savedTheme = localStorage.getItem("theme");
   if (savedTheme) {
     isDark.value = savedTheme === "dark";
@@ -619,7 +650,15 @@ onMounted(() => {
     ).matches;
     isDark.value = prefersDark;
   }
+
+  try {
+    isChinaUser.value = await checkChinaUser();
+  } catch (error) {
+    isChinaUser.value = false;
+  }
 });
+
+provide("isChinaUser", isChinaUser);
 const origin = ref("");
 const destination = ref("");
 const escOrigin = ref(false);
@@ -901,8 +940,8 @@ const handleExpandJourney = async (journey) => {
       journey.allStops = [];
     }
   } catch (e) {
-    console.error("获取途径站点失败:", e);
-    journey.stationsError = `无法加载站点数据: ${e.message}`;
+    console.error(e);
+    journey.stationsError = e.message;
   } finally {
     journey.stationsLoading = false;
   }
@@ -1054,7 +1093,7 @@ onMounted(async () => {
     const v = (await verRes.text()).trim();
     if (v.length === 8) version.value = v;
   } catch (e) {
-    console.error("加载初始数据失败:", e);
+    console.error(e);
   }
   initWorker();
   observer = new IntersectionObserver(
