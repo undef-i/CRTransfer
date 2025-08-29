@@ -104,7 +104,12 @@
       </n-layout-header>
 
       <n-layout-content
-        style="padding: 24px; max-width: 600px; margin: 0 auto; width: 100%"
+        style="
+          padding: 24px 10px;
+          max-width: 600px;
+          margin: 0 auto;
+          width: 100%;
+        "
       >
         <n-space vertical :size="24">
           <n-alert type="warning" :show-icon="true">
