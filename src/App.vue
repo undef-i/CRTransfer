@@ -257,8 +257,7 @@
                             >
                             <n-text style="font-size: 13px; line-height: 1.3"
                               ><n-text code>p</n-text>:
-                              <n-text code>Integer</n-text> -
-                              开行掩码(1=开行,0=停运)。</n-text
+                              <n-text code>Integer</n-text> - 开行掩码。</n-text
                             >
                           </n-space>
                         </n-space>

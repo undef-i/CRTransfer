@@ -4,6 +4,7 @@
     margin: 10px 0;
 }
 
+
 html,
 body {
     margin: 0;
@@ -11,14 +12,17 @@ body {
     height: 100%;
     background-color: #0d1117;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* 代码块和textarea统一mono字体 */
-code, pre, textarea, .n-code, .n-input--textarea textarea {
+code,
+pre,
+textarea,
+.n-code,
+.n-input--textarea textarea {
     font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace !important;
 }
 
