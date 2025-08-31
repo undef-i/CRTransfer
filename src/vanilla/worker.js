@@ -104,6 +104,22 @@ self.onmessage = async function (e) {
                 self.postMessage({ t: 'err', d: err.toString() || 'gts unk err', requestId: requestId });
             }
         }
+        else if (t === 'qry') {
+            try {
+                let r;
+                if (d.t === 'rdat') {
+                    r = wm.qry_rdat(d.k);
+                } else if (d.t === 'scdat') {
+                    r = wm.qry_scdat(d.k);
+                } else if (d.t === 'ndt') {
+                    r = wm.qry_ndt(d.k);
+                }
+                self.postMessage({ t: 'qr', d: r ? JSON.parse(r) : null, requestId: requestId });
+            } catch (err) {
+                console.error('qry err:', err);
+                self.postMessage({ t: 'err', d: err.toString() || 'unk err', requestId: requestId });
+            }
+        }
     } catch (err) {
         console.error('err in worker:', err);
         self.postMessage({ t: 'err', d: err.toString() || 'unk err' });

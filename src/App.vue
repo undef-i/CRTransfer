@@ -144,56 +144,195 @@
                   <span class="long-text">最短途径里程</span>
                   <span class="short-text">里程</span>
                 </n-button>
-              </n-button-group>
-              <div class="trip-planner-container">
-                <div class="input-group">
-                  <n-auto-complete
-                    v-model:value="origin"
-                    :options="originOptions"
-                    placeholder="起点"
-                    clearable
-                  />
-                  <n-button
-                    :type="escOrigin ? 'primary' : 'default'"
-                    :ghost="!escOrigin"
-                    @click="escOrigin = !escOrigin"
-                  >
-                    同城站
-                  </n-button>
-                </div>
-
                 <n-button
-                  text
-                  circle
-                  class="swap-button"
-                  @click="swapOriginDestination"
+                  :type="mode === 'custom' ? 'primary' : 'default'"
+                  :ghost="mode !== 'custom'"
+                  @click="mode = 'custom'"
                 >
-                  <template #icon
-                    ><n-icon :component="SwapHorizontalOutline"
-                  /></template>
+                  <span class="long-text">自定义查询</span>
+                  <span class="short-text">自定义</span>
                 </n-button>
+              </n-button-group>
 
-                <div class="input-group">
-                  <n-auto-complete
-                    v-model:value="destination"
-                    :options="destinationOptions"
-                    placeholder="终点"
-                    clearable
-                  />
+              <!-- 标准查询区域 -->
+              <n-collapse-transition :show="mode !== 'custom'">
+                <div class="trip-planner-container">
+                  <div class="input-group">
+                    <n-auto-complete
+                      v-model:value="origin"
+                      :options="originOptions"
+                      placeholder="起点"
+                      clearable
+                    />
+                    <n-button
+                      :type="escOrigin ? 'primary' : 'default'"
+                      :ghost="!escOrigin"
+                      @click="escOrigin = !escOrigin"
+                    >
+                      同城站
+                    </n-button>
+                  </div>
+
                   <n-button
-                    :type="escDestination ? 'primary' : 'default'"
-                    :ghost="!escDestination"
-                    @click="escDestination = !escDestination"
+                    text
+                    circle
+                    class="swap-button"
+                    @click="swapOriginDestination"
                   >
-                    同城站
+                    <template #icon
+                      ><n-icon :component="SwapHorizontalOutline"
+                    /></template>
                   </n-button>
+
+                  <div class="input-group">
+                    <n-auto-complete
+                      v-model:value="destination"
+                      :options="destinationOptions"
+                      placeholder="终点"
+                      clearable
+                    />
+                    <n-button
+                      :type="escDestination ? 'primary' : 'default'"
+                      :ghost="!escDestination"
+                      @click="escDestination = !escDestination"
+                    >
+                      同城站
+                    </n-button>
+                  </div>
                 </div>
-              </div>
+              </n-collapse-transition>
+
+              <!-- 自定义查询区域 -->
+              <n-collapse-transition :show="mode === 'custom'">
+                <n-space vertical :size="16">
+                  <n-collapse arrow-placement="right">
+                    <n-collapse-item title="数据结构">
+                      <n-space vertical :size="8">
+                        <n-text strong style="font-size: 14px"
+                          >1. <n-text code>qry('rdat')</n-text> →
+                          时刻表数据</n-text
+                        >
+                        <n-space vertical :size="2">
+                          <n-text style="font-size: 13px; line-height: 1.3"
+                            ><n-text code>t</n-text>:
+                            <n-text code>Array&lt;列车&gt;</n-text> -
+                            列车对象列表。</n-text
+                          >
+                          <n-space vertical :size="1" style="margin-left: 12px">
+                            <n-text style="font-size: 13px; line-height: 1.3"
+                              ><n-text code>tn</n-text>:
+                              <n-text code>String</n-text> - 车次号 (如
+                              C265/C268B)。</n-text
+                            >
+                            <n-text style="font-size: 13px; line-height: 1.3"
+                              ><n-text code>s</n-text>:
+                              <n-text code>Array&lt;站点&gt;</n-text> -
+                              经停站列表。</n-text
+                            >
+                            <n-space
+                              vertical
+                              :size="1"
+                              style="margin-left: 12px"
+                            >
+                              <n-text style="font-size: 13px; line-height: 1.3"
+                                ><n-text code>id</n-text>:
+                                <n-text code>Integer</n-text> - 车站ID。</n-text
+                              >
+                              <n-text style="font-size: 13px; line-height: 1.3"
+                                ><n-text code>n</n-text>:
+                                <n-text code>String</n-text> - 车站名。</n-text
+                              >
+                              <n-text style="font-size: 13px; line-height: 1.3"
+                                ><n-text code>a/d</n-text>:
+                                <n-text code>Integer</n-text> -
+                                到达/出发时间(分钟)。</n-text
+                              >
+                              <n-text style="font-size: 13px; line-height: 1.3"
+                                ><n-text code>km</n-text>:
+                                <n-text code>Integer</n-text> -
+                                累计里程(km)。</n-text
+                              >
+                            </n-space>
+                            <n-text style="font-size: 13px; line-height: 1.3"
+                              ><n-text code>r</n-text>:
+                              <n-text code>Integer</n-text> - 周期天数。</n-text
+                            >
+                            <n-text style="font-size: 13px; line-height: 1.3"
+                              ><n-text code>p</n-text>:
+                              <n-text code>Integer</n-text> -
+                              开行掩码(1=开行,0=停运)。</n-text
+                            >
+                          </n-space>
+                        </n-space>
+
+                        <n-text strong style="font-size: 14px"
+                          >2. <n-text code>qry('scdat')</n-text> →
+                          同城站数据</n-text
+                        >
+                        <n-space vertical :size="2">
+                          <n-text style="font-size: 13px; line-height: 1.3"
+                            ><n-text code>g</n-text>:
+                            <n-text code>Array&lt;分组&gt;</n-text> -
+                            同城站分组。</n-text
+                          >
+                          <n-space vertical :size="1" style="margin-left: 12px">
+                            <n-text style="font-size: 13px; line-height: 1.3"
+                              ><n-text code>s</n-text>:
+                              <n-text code>Array&lt;站点&gt;</n-text> -
+                              车站列表。</n-text
+                            >
+                            <n-space
+                              vertical
+                              :size="1"
+                              style="margin-left: 12px"
+                            >
+                              <n-text style="font-size: 13px; line-height: 1.3"
+                                ><n-text code>n</n-text>:
+                                <n-text code>String</n-text> - 车站名。</n-text
+                              >
+                            </n-space>
+                          </n-space>
+                        </n-space>
+                      </n-space>
+                    </n-collapse-item>
+                  </n-collapse>
+
+                  <n-space vertical :size="12">
+                    <n-space :size="8" wrap>
+                      <n-button
+                        size="small"
+                        @click="loadCustomTemplate('topStations')"
+                      >
+                        车次最多的站
+                      </n-button>
+                      <n-button
+                        size="small"
+                        @click="loadCustomTemplate('trainTypeStations')"
+                      >
+                        车次类型最多的站
+                      </n-button>
+                    </n-space>
+                  </n-space>
+
+                  <n-space vertical :size="12">
+                    <n-input
+                      v-model:value="customCode"
+                      type="textarea"
+                      placeholder=""
+                      :rows="10"
+                      :input-props="{ spellcheck: false }"
+                      font-family="Consolas, Monaco, monospace"
+                    />
+                  </n-space>
+                </n-space>
+              </n-collapse-transition>
 
               <n-divider style="margin: 0" />
 
               <div class="search-actions-container">
-                <n-collapse-transition :show="mode !== 'km'">
+                <n-collapse-transition
+                  :show="mode !== 'km' && mode !== 'custom'"
+                >
                   <n-input-group>
                     <n-input-group-label>最短换乘时间</n-input-group-label>
                     <n-input-number
@@ -216,18 +355,54 @@
                     :type="running ? 'error' : 'primary'"
                     :ghost="running"
                     :loading="!ready"
-                    :disabled="(!origin || !destination) && !ready"
+                    :disabled="
+                      (!origin || !destination) && !ready && mode !== 'custom'
+                    "
                     @click="handlePrimaryButtonClick"
                   >
                     <template #icon
                       ><n-icon :component="primaryButtonIcon"
                     /></template>
-                    {{ running ? "停止" : "搜索" }}
+                    {{ running ? "停止" : mode === "custom" ? "查询" : "搜索" }}
                   </n-button>
                 </n-space>
               </div>
             </n-space>
           </n-card>
+
+          <!-- 自定义查询结果显示区域 -->
+          <n-collapse-transition
+            :show="mode === 'custom' && customResult !== null"
+          >
+            <n-card style="margin-top: 16px">
+              <template #header>
+                <n-space
+                  justify="space-between"
+                  align="center"
+                  style="width: 100%"
+                >
+                  <n-text>查询结果</n-text>
+                  <n-button
+                    size="tiny"
+                    @click="copyCustomResult"
+                    quaternary
+                    type="primary"
+                  >
+                    <template #icon>
+                      <n-icon><CopyOutline /></n-icon>
+                    </template>
+                  </n-button>
+                </n-space>
+              </template>
+
+              <n-code
+                :code="JSON.stringify(customResult, null, 2)"
+                language="json"
+                word-wrap
+                style="max-height: 400px; overflow-y: auto"
+              />
+            </n-card>
+          </n-collapse-transition>
 
           <n-alert v-if="statusMessage" :type="statusType" :show-icon="true">{{
             statusMessage
@@ -441,6 +616,8 @@ import {
   NEmpty,
   NInputGroup,
   NInputGroupLabel,
+  NInput,
+  NCode,
 } from "naive-ui";
 import {
   TrainOutline,
@@ -451,6 +628,7 @@ import {
   StopCircleOutline,
   MapOutline,
   LogoGithub,
+  CopyOutline,
 } from "@vicons/ionicons5";
 import { SunnyOutline, MoonOutline } from "@vicons/ionicons5";
 import MapRenderer from "./MapRenderer.vue";
@@ -721,6 +899,10 @@ const gtsPromiseMap = new Map();
 const rawJourneyBuffer = new Map();
 let journeyResultBuffer = [];
 let bufferUpdateInterval = null;
+
+const customCode = ref("");
+const customResult = ref(null);
+const customLoading = ref(false);
 
 const primaryButtonIcon = computed(() =>
   running.value ? StopCircleOutline : SearchOutline
@@ -1102,12 +1284,22 @@ const stopSearch = () => {
     w.postMessage({ t: "stop" });
   }
 };
-const handlePrimaryButtonClick = () => {
+const handlePrimaryButtonClick = async () => {
   if (running.value) {
     stopSearch();
-  } else {
-    startSearch();
+    return;
   }
+
+  if (mode.value === "custom") {
+    await executeCustomQuery();
+    return;
+  }
+
+  if (!origin.value || !destination.value) {
+    return;
+  }
+
+  await startSearch();
 };
 const loadMore = () => {
   if (displayCount.value >= journeys.value.length) return;
@@ -1115,6 +1307,122 @@ const loadMore = () => {
     displayCount.value + BATCH_SIZE,
     journeys.value.length
   );
+};
+
+const executeCustomQuery = async () => {
+  if (!customCode.value.trim()) return;
+
+  customLoading.value = true;
+  try {
+    const queryAPI = {
+      trains: async (key = "") => {
+        const response = await fetch("rdat.json");
+        const data = await response.json();
+        return key ? data.t.filter((t) => t.tn.includes(key)) : data.t;
+      },
+      stations: async (key = "") => {
+        const response = await fetch("scdat.json");
+        const data = await response.json();
+        return key ? data.filter((s) => s.n.includes(key)) : data;
+      },
+      schedules: async (key = "") => {
+        const response = await fetch("ndt.json");
+        const data = await response.json();
+        return key ? data.filter((n) => n.tn.includes(key)) : data;
+      },
+      qry: async (type, key = "") => {
+        switch (type) {
+          case "rdat":
+            return await queryAPI.trains(key);
+          case "scdat":
+            return await queryAPI.stations(key);
+          case "ndt":
+            return await queryAPI.schedules(key);
+          default:
+            return [];
+        }
+      },
+    };
+
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {}
+    ).constructor;
+    const func = new AsyncFunction(
+      "trains",
+      "stations",
+      "schedules",
+      "qry",
+      "JSON",
+      customCode.value
+    );
+    const result = await func(
+      queryAPI.trains,
+      queryAPI.stations,
+      queryAPI.schedules,
+      queryAPI.qry,
+      JSON
+    );
+    customResult.value = result;
+  } catch (error) {
+    customResult.value = { error: error.message, stack: error.stack };
+  } finally {
+    customLoading.value = false;
+  }
+};
+
+const loadCustomTemplate = (type) => {
+  const templates = {
+    topStations: `// 查询车次最多的 20 个站点
+const trainData = await qry('rdat');
+const stationCounts = {};
+
+trainData.forEach(train => {
+  train.s.forEach(station => {
+    stationCounts[station.n] = (stationCounts[station.n] || 0) + 1;
+  });
+});
+
+return Object.entries(stationCounts)
+  .map(([station, count]) => ({ station, count }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 20);`,
+
+    trainTypeStations: `// 查询车次类型最多的 10 个站
+const trainData = await qry('rdat');
+const stationTrainTypes = {};
+
+function getTrainType(trainNumber) {
+  const firstChar = trainNumber.charAt(0);
+  return isNaN(parseInt(firstChar)) ? firstChar : 'Number';
+}
+
+trainData.forEach(train => {
+  const trainType = getTrainType(train.tn);
+  train.s.forEach(station => {
+    if (!stationTrainTypes[station.n]) {
+      stationTrainTypes[station.n] = new Set();
+    }
+    stationTrainTypes[station.n].add(trainType);
+  });
+});
+
+return Object.entries(stationTrainTypes)
+  .map(([station, types]) => ({
+    station,
+    typeCount: types.size,
+    types: Array.from(types).sort()
+  }))
+  .sort((a, b) => b.typeCount - a.typeCount)
+  .slice(0, 10);`,
+  };
+
+  customCode.value = templates[type] || "";
+};
+
+const copyCustomResult = () => {
+  if (customResult.value) {
+    navigator.clipboard.writeText(JSON.stringify(customResult.value, null, 2));
+  }
 };
 let observer = null;
 onMounted(async () => {
