@@ -99,7 +99,7 @@ let mapInstance = null;
 let resizeObserver = null;
 
 const isDark = ref(true);
-const isChinaUser = inject('isChinaUser', false);
+const isChinaUser = inject("isChinaUser", false);
 
 const updateThemeFromStorage = () => {
   const savedTheme = localStorage.getItem("theme");

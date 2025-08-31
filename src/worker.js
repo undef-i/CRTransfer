@@ -120,8 +120,6 @@ self.onmessage = async function (e) {
                     r = wm.qry_rdat(d.k);
                 } else if (d.t === "scdat") {
                     r = wm.qry_scdat(d.k);
-                } else if (d.t === "ndt") {
-                    r = wm.qry_ndt(d.k);
                 }
                 self.postMessage({
                     t: "qr",

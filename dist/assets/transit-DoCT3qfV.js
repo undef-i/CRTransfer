@@ -208,10 +208,43 @@ function getDataViewMemory0() {
     return cachedDataViewMemory0;
 }
 
+export function stop() {
+    wasm.stop();
+}
+
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {number} mtt
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @returns {Promise<void>}
+ */
+export function find_mx(o, d, mtt, esc_o, esc_d) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.find_mx(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
+    return ret;
+}
+
 function takeFromExternrefTable0(idx) {
     const value = wasm.__wbindgen_export_2.get(idx);
     wasm.__externref_table_dealloc(idx);
     return value;
+}
+/**
+ * @returns {string}
+ */
+export function qry_scdat() {
+    const ret = wasm.qry_scdat();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
+    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
+    return v1;
 }
 
 function getArrayJsValueFromWasm0(ptr, len) {
@@ -238,40 +271,23 @@ export function g_stns() {
 }
 
 /**
- * @param {string} o
- * @param {string} d
- * @param {number} mtt
- * @param {boolean} esc_o
- * @param {boolean} esc_d
- * @returns {Promise<void>}
+ * @returns {string}
  */
-export function find_mx(o, d, mtt, esc_o, esc_d) {
-    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find_mx(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
-    return ret;
-}
-
-export function stop() {
-    wasm.stop();
-}
-
-/**
- * @param {string} tn
- * @param {number} dtr
- * @param {number} atr
- * @returns {any}
- */
-export function gts(tn, dtr, atr) {
-    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.gts(ptr0, len0, dtr, atr);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
+export function qry_rdat() {
+    const ret = wasm.qry_rdat();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
     }
-    return takeFromExternrefTable0(ret[0]);
+    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
+    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
+    return v1;
+}
+
+export function init() {
+    const ret = wasm.init();
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
 /**
@@ -307,19 +323,28 @@ export function find(o, d, mtt, esc_o, esc_d) {
     return ret;
 }
 
-export function init() {
-    const ret = wasm.init();
-    if (ret[1]) {
-        throw takeFromExternrefTable0(ret[0]);
+/**
+ * @param {string} tn
+ * @param {number} dtr
+ * @param {number} atr
+ * @returns {any}
+ */
+export function gts(tn, dtr, atr) {
+    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.gts(ptr0, len0, dtr, atr);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 function __wbg_adapter_20(arg0, arg1, arg2) {
-    wasm.closure46_externref_shim(arg0, arg1, arg2);
+    wasm.closure41_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_36(arg0, arg1, arg2, arg3) {
-    wasm.closure36_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_38(arg0, arg1, arg2, arg3) {
+    wasm.closure26_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 async function __wbg_load(module, imports) {
@@ -391,7 +416,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return __wbg_adapter_36(a, state0.b, arg0, arg1);
+                    return __wbg_adapter_38(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -463,8 +488,8 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper809 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 47, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper842 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 42, __wbg_adapter_20);
         return ret;
     };
     imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {

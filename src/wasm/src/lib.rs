@@ -11,7 +11,7 @@ use js_sys::Promise;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, WorkerGlobalScope};
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[allow(dead_code)]
 struct RawStop {
     n: String,
@@ -20,11 +20,31 @@ struct RawStop {
     km: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[allow(dead_code)]
 struct RawTrain {
     tn: String,
     s: Vec<RawStop>,
+}
+
+#[derive(Deserialize)]
+struct RawRdat {
+    t: Vec<RawTrain>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawScStation {
+    pub n: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawScGroup {
+    pub s: Vec<RawScStation>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawScdat {
+    pub g: Vec<RawScGroup>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,16 +85,6 @@ pub struct Jny {
     pub p: Vec<PS>,
 }
 
-#[derive(Deserialize)]
-struct PData {
-    dat: HashMap<usize, Vec<R>>,
-    scd: HashMap<usize, Vec<usize>>,
-    s2i: HashMap<String, usize>,
-    i2s: Vec<String>,
-    locations: HashMap<String, SL>,
-    rdat_map: HashMap<String, RawTrain>,
-}
-
 thread_local! {
     static DAT: RefCell<Option<HashMap<usize, Vec<R>>>> = RefCell::new(None);
     static SCD: RefCell<Option<HashMap<usize, Vec<usize>>>> = RefCell::new(None);
@@ -82,6 +92,10 @@ thread_local! {
     static I2S: RefCell<Option<Vec<String>>> = RefCell::new(None);
     static LOCATIONS: RefCell<Option<HashMap<String, SL>>> = RefCell::new(None);
     static RDAT_MAP: RefCell<Option<HashMap<String, RawTrain>>> = RefCell::new(None);
+
+    static RAW_RDAT: RefCell<Option<Vec<RawTrain>>> = RefCell::new(None);
+    static RAW_SCDAT: RefCell<Option<RawScdat>> = RefCell::new(None);
+
     static STOP: RefCell<bool> = RefCell::new(false);
 }
 
@@ -111,6 +125,7 @@ impl Ord for St {
         o.tdur.cmp(&self.tdur).then_with(|| self.idt.cmp(&o.idt))
     }
 }
+
 #[derive(Debug, Clone)]
 struct StK {
     tkm: i32,
@@ -145,28 +160,127 @@ struct StMx {
     r: Option<R>,
 }
 
-const PDATA_BIN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/transit_data.bin"));
+const RDAT_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rdat.json.br"));
+const SCDAT_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/scdat.json.br"));
+const SL_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/sl.json.br"));
 
 #[wasm_bindgen(js_name = init)]
 pub fn init() -> Result<(), JsValue> {
-    let mut bytes = Vec::new();
-    let mut decompressor = Decompressor::new(PDATA_BIN, 4096);
-    decompressor
-        .read_to_end(&mut bytes)
-        .map_err(|e| JsValue::from_str(&format!("Brotli decompression error: {}", e)))?;
+    let decompress = |bytes: &[u8]| -> Result<String, JsValue> {
+        let mut decompressed = Vec::new();
+        let mut decompressor = Decompressor::new(bytes, 4096);
+        decompressor
+            .read_to_end(&mut decompressed)
+            .map_err(|e| JsValue::from_str(&format!("Brotli decompression error: {}", e)))?;
+        String::from_utf8(decompressed)
+            .map_err(|e| JsValue::from_str(&format!("UTF-8 conversion error: {}", e)))
+    };
 
-    let d: PData = bincode::deserialize(&bytes)
-        .map_err(|e| JsValue::from_str(&format!("Data load error: {}", e)))?;
+    let mut rdat_json = decompress(RDAT_JSON_BR)?;
+    let mut scdat_json = decompress(SCDAT_JSON_BR)?;
+    let mut sl_json = decompress(SL_JSON_BR)?;
 
-    DAT.with(|dat| *dat.borrow_mut() = Some(d.dat));
-    SCD.with(|scd| *scd.borrow_mut() = Some(d.scd));
-    S2I.with(|s2i| *s2i.borrow_mut() = Some(d.s2i));
-    I2S.with(|i2s| *i2s.borrow_mut() = Some(d.i2s));
-    LOCATIONS.with(|locations| *locations.borrow_mut() = Some(d.locations));
+    let rdat_root: RawRdat = unsafe { simd_json::from_str(&mut rdat_json) }
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse rdat.json: {}", e)))?;
+    let scdat_root: RawScdat = unsafe { simd_json::from_str(&mut scdat_json) }
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse scdat.json: {}", e)))?;
+    let locations: HashMap<String, SL> = unsafe { simd_json::from_str(&mut sl_json) }
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse sl.json: {}", e)))?;
 
-    RDAT_MAP.with(|map| *map.borrow_mut() = Some(d.rdat_map));
+    RAW_RDAT.with(|cell| *cell.borrow_mut() = Some(rdat_root.t.clone()));
+    RAW_SCDAT.with(|cell| *cell.borrow_mut() = Some(scdat_root.clone()));
+
+    let mut s2i: HashMap<String, usize> = HashMap::new();
+    let mut i2s: Vec<String> = Vec::new();
+    let get_sid = |name: &str, s2i: &mut HashMap<String, usize>, i2s: &mut Vec<String>| -> usize {
+        *s2i.entry(name.to_string()).or_insert_with(|| {
+            let id = i2s.len();
+            i2s.push(name.to_string());
+            id
+        })
+    };
+
+    let mut dat: HashMap<usize, Vec<R>> = HashMap::with_capacity(500000);
+    let mut global_leg_id_counter: u32 = 0;
+
+    for train in &rdat_root.t {
+        for i in 0..(train.s.len().saturating_sub(1)) {
+            let b = &train.s[i];
+            let a = &train.s[i + 1];
+            let current_leg_id = global_leg_id_counter;
+            let next_leg_id = if i + 1 < train.s.len() - 1 {
+                Some(global_leg_id_counter + 1)
+            } else {
+                None
+            };
+            global_leg_id_counter += 1;
+
+            if b.d != -1 && a.a != -1 && a.a > b.d && a.km > b.km {
+                let b_sid = get_sid(&b.n, &mut s2i, &mut i2s);
+                let a_sid = get_sid(&a.n, &mut s2i, &mut i2s);
+                dat.entry(b_sid).or_default().push(R {
+                    tn: train.tn.clone(),
+                    bs: b_sid,
+                    al: a_sid,
+                    dtr: b.d,
+                    dur: a.a - b.d,
+                    km: a.km - b.km,
+                    leg_id: current_leg_id,
+                    next_leg_id,
+                });
+            }
+        }
+    }
+
+    let mut scd: HashMap<usize, Vec<usize>> = HashMap::with_capacity(5000);
+    for group in &scdat_root.g {
+        let sids: Vec<usize> = group
+            .s
+            .iter()
+            .map(|s| get_sid(&s.n, &mut s2i, &mut i2s))
+            .collect();
+        if sids.len() > 1 {
+            for &id in &sids {
+                scd.insert(id, sids.clone());
+            }
+        }
+    }
+
+    let rdat_map: HashMap<String, RawTrain> =
+        rdat_root.t.into_iter().map(|t| (t.tn.clone(), t)).collect();
+
+    DAT.with(|cell| *cell.borrow_mut() = Some(dat));
+    SCD.with(|cell| *cell.borrow_mut() = Some(scd));
+    S2I.with(|cell| *cell.borrow_mut() = Some(s2i));
+    I2S.with(|cell| *cell.borrow_mut() = Some(i2s));
+    LOCATIONS.with(|cell| *cell.borrow_mut() = Some(locations));
+    RDAT_MAP.with(|cell| *cell.borrow_mut() = Some(rdat_map));
 
     Ok(())
+}
+
+#[wasm_bindgen(js_name = qry_rdat)]
+pub fn query_raw_rdat() -> Result<String, JsValue> {
+    RAW_RDAT.with(|cell| {
+        if let Some(rdat) = cell.borrow().as_ref() {
+            serde_json::to_string(rdat)
+                .map_err(|e| JsValue::from_str(&format!("Failed to serialize rdat: {}", e)))
+        } else {
+            Err(JsValue::from_str("rdat not initialized"))
+        }
+    })
+}
+
+#[wasm_bindgen(js_name = qry_scdat)]
+pub fn query_raw_scdat() -> Result<String, JsValue> {
+    RAW_SCDAT.with(|cell| {
+        if let Some(scdat) = cell.borrow().as_ref() {
+            serde_json::to_string(scdat)
+                .map_err(|e| JsValue::from_str(&format!("Failed to serialize scdat: {}", e)))
+        } else {
+            Err(JsValue::from_str("scdat not initialized"))
+        }
+    })
 }
 
 #[wasm_bindgen]
@@ -279,6 +393,7 @@ fn mk_path_k(st: &StK) -> Vec<PS> {
     segs.reverse();
     segs
 }
+
 #[wasm_bindgen]
 pub fn g_stns() -> Result<Vec<String>, JsValue> {
     I2S.with(|d| {
@@ -288,6 +403,7 @@ pub fn g_stns() -> Result<Vec<String>, JsValue> {
             .ok_or_else(|| JsValue::from_str("data not loaded"))
     })
 }
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct RawStation {
     pub n: String,
@@ -298,10 +414,7 @@ pub struct RawStation {
 pub struct RawStationGroup {
     pub s: Vec<RawStation>,
 }
-#[derive(Debug, Clone, Deserialize)]
-pub struct RawScdat {
-    pub g: Vec<RawStationGroup>,
-}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Stl {
     pub n: String,
@@ -309,12 +422,13 @@ pub struct Stl {
     pub lon: f64,
     pub rn: Vec<String>,
 }
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SL {
     pub lat: Option<f64>,
     pub lon: Option<f64>,
     pub rn: Option<Vec<String>>,
 }
+
 #[wasm_bindgen]
 pub fn gts(tn: &str, dtr: i32, atr: i32) -> Result<JsValue, JsValue> {
     let result = RDAT_MAP.with(|map_cell| {
@@ -361,10 +475,12 @@ pub fn gts(tn: &str, dtr: i32, atr: i32) -> Result<JsValue, JsValue> {
         Err(e) => Err(JsValue::from_str(&e.to_string())),
     }
 }
+
 #[wasm_bindgen]
 extern "C" {
     fn on_jny(j: &str);
 }
+
 async fn sleep(ms: i32) -> Result<(), JsValue> {
     let p = Promise::new(&mut |resolve, _| {
         let g = js_sys::global();
@@ -380,6 +496,7 @@ async fn sleep(ms: i32) -> Result<(), JsValue> {
     JsFuture::from(p).await?;
     Ok(())
 }
+
 #[wasm_bindgen]
 pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
     rst_stop();

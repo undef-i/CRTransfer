@@ -154,7 +154,6 @@
                 </n-button>
               </n-button-group>
 
-              <!-- 标准查询区域 -->
               <n-collapse-transition :show="mode !== 'custom'">
                 <div class="trip-planner-container">
                   <div class="input-group">
@@ -202,7 +201,6 @@
                 </div>
               </n-collapse-transition>
 
-              <!-- 自定义查询区域 -->
               <n-collapse-transition :show="mode === 'custom'">
                 <n-space vertical :size="16">
                   <n-collapse arrow-placement="right">
@@ -302,12 +300,14 @@
                       <n-button
                         size="small"
                         @click="loadCustomTemplate('topStations')"
+                        :disabled="!ready"
                       >
                         车次最多的站
                       </n-button>
                       <n-button
                         size="small"
                         @click="loadCustomTemplate('trainTypeStations')"
+                        :disabled="!ready"
                       >
                         车次类型最多的站
                       </n-button>
@@ -355,22 +355,26 @@
                     :type="running ? 'error' : 'primary'"
                     :ghost="running"
                     :loading="!ready"
-                    :disabled="
-                      (!origin || !destination) && !ready && mode !== 'custom'
-                    "
+                    :disabled="!ready || (running && mode !== 'custom')"
                     @click="handlePrimaryButtonClick"
                   >
                     <template #icon
                       ><n-icon :component="primaryButtonIcon"
                     /></template>
-                    {{ running ? "停止" : mode === "custom" ? "查询" : "搜索" }}
+                    {{ running ? "停止" : "查询" }}
                   </n-button>
                 </n-space>
               </div>
             </n-space>
           </n-card>
 
-          <!-- 自定义查询结果显示区域 -->
+          <n-alert
+            v-if="statusMessage && mode === 'custom'"
+            :type="statusType"
+            :show-icon="true"
+            >{{ statusMessage }}</n-alert
+          >
+
           <n-collapse-transition
             :show="mode === 'custom' && customResult !== null"
           >
@@ -404,9 +408,12 @@
             </n-card>
           </n-collapse-transition>
 
-          <n-alert v-if="statusMessage" :type="statusType" :show-icon="true">{{
-            statusMessage
-          }}</n-alert>
+          <n-alert
+            v-if="statusMessage && mode !== 'custom'"
+            :type="statusType"
+            :show-icon="true"
+            >{{ statusMessage }}</n-alert
+          >
           <n-progress
             v-if="progressVisible"
             type="line"
@@ -902,7 +909,6 @@ let bufferUpdateInterval = null;
 
 const customCode = ref("");
 const customResult = ref(null);
-const customLoading = ref(false);
 
 const primaryButtonIcon = computed(() =>
   running.value ? StopCircleOutline : SearchOutline
@@ -1224,6 +1230,18 @@ const initWorker = () => {
           gtsPromiseMap.delete(requestId);
         }
         break;
+      case "qr":
+        if (gtsPromiseMap.has(requestId)) {
+          gtsPromiseMap.get(requestId).resolve(d);
+          gtsPromiseMap.delete(requestId);
+        }
+        break;
+      case "qry_err":
+        if (gtsPromiseMap.has(requestId)) {
+          gtsPromiseMap.get(requestId).reject(new Error(d));
+          gtsPromiseMap.delete(requestId);
+        }
+        break;
     }
   };
   w.onerror = (err) => {
@@ -1235,7 +1253,7 @@ const initWorker = () => {
 const startSearch = () => {
   if (running.value || !ready.value) return;
   running.value = true;
-  statusMessage.value = "正在搜索，请稍候...";
+  statusMessage.value = "正在查询，请稍候...";
   journeys.value = [];
   rawJourneyBuffer.clear();
   journeyResultBuffer = [];
@@ -1274,9 +1292,9 @@ const finishSearch = () => {
     journeyResultBuffer = [];
   }
   if (journeys.value.length > 0) {
-    statusMessage.value = `搜索完成，共找到 ${journeys.value.length} 条方案`;
-  } else if (statusMessage.value.includes("搜索")) {
-    statusMessage.value = "搜索已停止";
+    statusMessage.value = `查询完成，共找到 ${journeys.value.length} 条方案`;
+  } else if (statusMessage.value.includes("查询")) {
+    statusMessage.value = "查询已停止";
   }
 };
 const stopSearch = () => {
@@ -1312,23 +1330,35 @@ const loadMore = () => {
 const executeCustomQuery = async () => {
   if (!customCode.value.trim()) return;
 
-  customLoading.value = true;
+  statusMessage.value = "正在执行自定义查询...";
+  customResult.value = null;
+
   try {
     const queryAPI = {
       trains: async (key = "") => {
-        const response = await fetch("rdat.json");
-        const data = await response.json();
-        return key ? data.t.filter((t) => t.tn.includes(key)) : data.t;
+        return new Promise((resolve, reject) => {
+          const requestId = Math.random().toString(36).substring(2, 9);
+          gtsPromiseMap.set(requestId, { resolve, reject });
+          w.postMessage({
+            t: "qry",
+            d: { t: "rdat", k: key },
+            requestId,
+          });
+        });
       },
       stations: async (key = "") => {
-        const response = await fetch("scdat.json");
-        const data = await response.json();
-        return key ? data.filter((s) => s.n.includes(key)) : data;
+        return new Promise((resolve, reject) => {
+          const requestId = Math.random().toString(36).substring(2, 9);
+          gtsPromiseMap.set(requestId, { resolve, reject });
+          w.postMessage({
+            t: "qry",
+            d: { t: "scdat", k: key },
+            requestId,
+          });
+        });
       },
       schedules: async (key = "") => {
-        const response = await fetch("ndt.json");
-        const data = await response.json();
-        return key ? data.filter((n) => n.tn.includes(key)) : data;
+        return [];
       },
       qry: async (type, key = "") => {
         switch (type) {
@@ -1336,8 +1366,6 @@ const executeCustomQuery = async () => {
             return await queryAPI.trains(key);
           case "scdat":
             return await queryAPI.stations(key);
-          case "ndt":
-            return await queryAPI.schedules(key);
           default:
             return [];
         }
@@ -1363,16 +1391,15 @@ const executeCustomQuery = async () => {
       JSON
     );
     customResult.value = result;
+    statusMessage.value = "";
   } catch (error) {
     customResult.value = { error: error.message, stack: error.stack };
-  } finally {
-    customLoading.value = false;
   }
 };
 
 const loadCustomTemplate = (type) => {
   const templates = {
-    topStations: `// 查询车次最多的 20 个站点
+    topStations: `// 查询车次最多的 20 个站
 const trainData = await qry('rdat');
 const stationCounts = {};
 
@@ -1472,7 +1499,7 @@ watch([mode, mtt, escOrigin, escDestination], () => {
     journeys.value = [];
     rawJourneyBuffer.clear();
     displayCount.value = 0;
-    statusMessage.value = "查询条件更改，重新搜索";
+    statusMessage.value = "查询条件更改，重新查询";
   }
 });
 
