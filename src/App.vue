@@ -207,86 +207,75 @@
                     <n-collapse-item title="数据结构">
                       <n-space vertical :size="8">
                         <n-text strong style="font-size: 14px"
-                          >1. <n-text code>qry('rdat')</n-text> →
-                          时刻表数据</n-text
+                          >接口 <n-text code>qry('rdat')</n-text></n-text
                         >
-                        <n-space vertical :size="2">
-                          <n-text style="font-size: 13px; line-height: 1.3"
-                            ><n-text code>t</n-text>:
-                            <n-text code>Array&lt;列车&gt;</n-text> -
-                            列车对象列表。</n-text
-                          >
-                          <n-space vertical :size="1" style="margin-left: 12px">
-                            <n-text style="font-size: 13px; line-height: 1.3"
-                              ><n-text code>tn</n-text>:
-                              <n-text code>String</n-text> - 车次号 (如
-                              C265/C268B)。</n-text
-                            >
-                            <n-text style="font-size: 13px; line-height: 1.3"
-                              ><n-text code>s</n-text>:
-                              <n-text code>Array&lt;站点&gt;</n-text> -
-                              经停站列表。</n-text
-                            >
-                            <n-space
-                              vertical
-                              :size="1"
-                              style="margin-left: 12px"
-                            >
-                              <n-text style="font-size: 13px; line-height: 1.3"
-                                ><n-text code>id</n-text>:
-                                <n-text code>Integer</n-text> - 车站ID。</n-text
-                              >
-                              <n-text style="font-size: 13px; line-height: 1.3"
-                                ><n-text code>n</n-text>:
-                                <n-text code>String</n-text> - 车站名。</n-text
-                              >
-                              <n-text style="font-size: 13px; line-height: 1.3"
-                                ><n-text code>a/d</n-text>:
-                                <n-text code>Integer</n-text> -
-                                到达/出发时间(分钟)。</n-text
-                              >
-                              <n-text style="font-size: 13px; line-height: 1.3"
-                                ><n-text code>km</n-text>:
-                                <n-text code>Integer</n-text> -
-                                累计里程(km)。</n-text
-                              >
+                        <n-text style="font-size: 13px; line-height: 1.3"
+                          >返回: <n-text code>Array&lt;Train&gt;</n-text> - 列车对象的数组。</n-text
+                        >
+                        <n-space vertical :size="2" style="margin-left: 12px">
+                          <n-text style="font-size: 13px; line-height: 1.3">
+                            <n-text code>Train</n-text> 对象:
+                          </n-text>
+                          <n-space vertical :size="1" style="margin-left: 24px">
+                            <n-text style="font-size: 13px; line-height: 1.3">
+                              • <n-text code>tn</n-text>: <n-text code>String</n-text> - 车次号。
+                            </n-text>
+                            <n-text style="font-size: 13px; line-height: 1.3">
+                              • <n-text code>r</n-text>: <n-text code>Integer</n-text> - 运行周期总天数。
+                            </n-text>
+                            <n-text style="font-size: 13px; line-height: 1.3">
+                              • <n-text code>p</n-text>: <n-text code>Integer</n-text> - 开行位掩码 (其二进制从右至左的每一位对应周期内一天的开行状态)。
+                            </n-text>
+                            <n-text style="font-size: 13px; line-height: 1.3">
+                              • <n-text code>s</n-text>: <n-text code>Array&lt;Station&gt;</n-text> - 经停站对象数组。
+                            </n-text>
+                            <n-space vertical :size="1" style="margin-left: 36px">
+                              <n-text style="font-size: 13px; line-height: 1.3">
+                                <n-text code>Station</n-text> 对象:
+                              </n-text>
+                              <n-space vertical :size="1" style="margin-left: 48px">
+                                <n-text style="font-size: 13px; line-height: 1.3">
+                                  - <n-text code>id</n-text>: <n-text code>Integer</n-text> - 车站 ID。
+                                </n-text>
+                                <n-text style="font-size: 13px; line-height: 1.3">
+                                  - <n-text code>n</n-text>: <n-text code>String</n-text> - 站名。
+                                </n-text>
+                                <n-text style="font-size: 13px; line-height: 1.3">
+                                  - <n-text code>a</n-text> / <n-text code>d</n-text>: <n-text code>Integer</n-text> - 到达/出发时间 (从始发日00:00起计的总分钟数)。
+                                </n-text>
+                                <n-text style="font-size: 13px; line-height: 1.3">
+                                  - <n-text code>km</n-text>: <n-text code>Integer</n-text> - 累计里程 (公里)。
+                                </n-text>
+                              </n-space>
                             </n-space>
-                            <n-text style="font-size: 13px; line-height: 1.3"
-                              ><n-text code>r</n-text>:
-                              <n-text code>Integer</n-text> - 周期天数。</n-text
-                            >
-                            <n-text style="font-size: 13px; line-height: 1.3"
-                              ><n-text code>p</n-text>:
-                              <n-text code>Integer</n-text> - 开行掩码。</n-text
-                            >
                           </n-space>
                         </n-space>
 
+                        <n-divider style="margin: 8px 0" />
+
                         <n-text strong style="font-size: 14px"
-                          >2. <n-text code>qry('scdat')</n-text> →
-                          同城站数据</n-text
+                          >接口 <n-text code>qry('scdat')</n-text></n-text
                         >
-                        <n-space vertical :size="2">
-                          <n-text style="font-size: 13px; line-height: 1.3"
-                            ><n-text code>g</n-text>:
-                            <n-text code>Array&lt;分组&gt;</n-text> -
-                            同城站分组。</n-text
-                          >
-                          <n-space vertical :size="1" style="margin-left: 12px">
-                            <n-text style="font-size: 13px; line-height: 1.3"
-                              ><n-text code>s</n-text>:
-                              <n-text code>Array&lt;站点&gt;</n-text> -
-                              车站列表。</n-text
-                            >
-                            <n-space
-                              vertical
-                              :size="1"
-                              style="margin-left: 12px"
-                            >
-                              <n-text style="font-size: 13px; line-height: 1.3"
-                                ><n-text code>n</n-text>:
-                                <n-text code>String</n-text> - 车站名。</n-text
-                              >
+                        <n-text style="font-size: 13px; line-height: 1.3"
+                          >返回: <n-text code>{ g: Array&lt;Group&gt; }</n-text> - 包含分组列表的对象。</n-text
+                        >
+                        <n-space vertical :size="2" style="margin-left: 12px">
+                          <n-text style="font-size: 13px; line-height: 1.3">
+                            <n-text code>Group</n-text> 对象:
+                          </n-text>
+                          <n-space vertical :size="1" style="margin-left: 24px">
+                            <n-text style="font-size: 13px; line-height: 1.3">
+                              • <n-text code>s</n-text>: <n-text code>Array&lt;StationSimple&gt;</n-text> - 同组车站对象数组。
+                            </n-text>
+                            <n-space vertical :size="1" style="margin-left: 36px">
+                              <n-text style="font-size: 13px; line-height: 1.3">
+                                <n-text code>StationSimple</n-text> 对象:
+                              </n-text>
+                              <n-space vertical :size="1" style="margin-left: 48px">
+                                <n-text style="font-size: 13px; line-height: 1.3">
+                                  - <n-text code>n</n-text>: <n-text code>String</n-text> - 站名。
+                                </n-text>
+                              </n-space>
                             </n-space>
                           </n-space>
                         </n-space>
@@ -354,7 +343,7 @@
                     :type="running ? 'error' : 'primary'"
                     :ghost="running"
                     :loading="!ready"
-                    :disabled="!ready || (running && mode !== 'custom')"
+                    :disabled="!ready && !running"
                     @click="handlePrimaryButtonClick"
                   >
                     <template #icon
@@ -922,7 +911,7 @@ const statusType = computed(() => {
   if (msg.includes("错误")) return "error";
   if (msg.includes("共") || msg.includes("查询到")) return "success";
   if (running.value || msg.includes("加载")) return "info";
-  if (msg.includes("就绪") || msg.includes("查询条件更改")) return "success";
+  if (msg.includes("就绪") || msg.includes("查询条件更改")) return "info";
   return "default";
 });
 
@@ -1329,47 +1318,91 @@ const loadMore = () => {
 const executeCustomQuery = async () => {
   if (!customCode.value.trim()) return;
 
+  running.value = true;
   statusMessage.value = "正在执行自定义查询...";
   customResult.value = null;
 
   try {
-    const queryAPI = {
-      trains: async (key = "") => {
-        return new Promise((resolve, reject) => {
-          const requestId = Math.random().toString(36).substring(2, 9);
-          gtsPromiseMap.set(requestId, { resolve, reject });
-          w.postMessage({
-            t: "qry",
-            d: { t: "rdat", k: key },
-            requestId,
-          });
-        });
-      },
-      stations: async (key = "") => {
-        return new Promise((resolve, reject) => {
-          const requestId = Math.random().toString(36).substring(2, 9);
-          gtsPromiseMap.set(requestId, { resolve, reject });
-          w.postMessage({
-            t: "qry",
-            d: { t: "scdat", k: key },
-            requestId,
-          });
-        });
-      },
-      schedules: async (key = "") => {
-        return [];
-      },
-      qry: async (type, key = "") => {
-        switch (type) {
-          case "rdat":
-            return await queryAPI.trains(key);
-          case "scdat":
-            return await queryAPI.stations(key);
-          default:
-            return [];
+    const createCancellableQueryAPI = () => {
+      let cancelled = false;
+      
+      const checkCancelled = () => {
+        if (cancelled || !running.value) {
+          throw new Error('查询已取消');
         }
-      },
+      };
+      
+      return {
+        trains: async (key = "") => {
+          checkCancelled();
+          return new Promise((resolve, reject) => {
+            const requestId = Math.random().toString(36).substring(2, 9);
+            gtsPromiseMap.set(requestId, { resolve, reject });
+            w.postMessage({
+              t: "qry",
+              d: { t: "rdat", k: key },
+              requestId,
+            });
+            
+            const interval = setInterval(() => {
+              if (cancelled || !running.value) {
+                clearInterval(interval);
+                if (gtsPromiseMap.has(requestId)) {
+                  gtsPromiseMap.delete(requestId);
+                  reject(new Error('查询已取消'));
+                }
+              }
+            }, 100);
+          });
+        },
+        stations: async (key = "") => {
+          checkCancelled();
+          return new Promise((resolve, reject) => {
+            const requestId = Math.random().toString(36).substring(2, 9);
+            gtsPromiseMap.set(requestId, { resolve, reject });
+            w.postMessage({
+              t: "qry",
+              d: { t: "scdat", k: key },
+              requestId,
+            });
+            
+            const interval = setInterval(() => {
+              if (cancelled || !running.value) {
+                clearInterval(interval);
+                if (gtsPromiseMap.has(requestId)) {
+                  gtsPromiseMap.delete(requestId);
+                  reject(new Error('查询已取消'));
+                }
+              }
+            }, 100);
+          });
+        },
+        schedules: async (key = "") => {
+          checkCancelled();
+          return [];
+        },
+        qry: async (type, key = "") => {
+          checkCancelled();
+          switch (type) {
+            case "rdat":
+              return await queryAPI.trains(key);
+            case "scdat":
+              return await queryAPI.stations(key);
+            default:
+              return [];
+          }
+        },
+        cancel: () => {
+          cancelled = true;
+        }
+      };
     };
+
+    const queryAPI = createCancellableQueryAPI();
+    
+    if (!running.value) {
+      throw new Error('查询已取消');
+    }
 
     const AsyncFunction = Object.getPrototypeOf(
       async function () {}
@@ -1389,10 +1422,22 @@ const executeCustomQuery = async () => {
       queryAPI.qry,
       JSON
     );
+    
+    if (!running.value) {
+      throw new Error('查询已取消');
+    }
+    
     customResult.value = result;
     statusMessage.value = "";
   } catch (error) {
-    customResult.value = { error: error.message, stack: error.stack };
+    if (error.message === '查询已取消') {
+      statusMessage.value = "查询已停止";
+      customResult.value = null;
+    } else {
+      customResult.value = { error: error.message, stack: error.stack };
+    }
+  } finally {
+    running.value = false;
   }
 };
 
@@ -1494,12 +1539,17 @@ onBeforeUnmount(() => {
   gtsPromiseMap.clear();
 });
 watch([mode, mtt, escOrigin, escDestination], () => {
-  if (!running.value && journeys.value.length > 0) {
+  if (journeys.value.length > 0) {
     journeys.value = [];
     rawJourneyBuffer.clear();
     displayCount.value = 0;
-    statusMessage.value = "查询条件更改，重新查询";
   }
+  
+  if (customResult.value !== null) {
+    customResult.value = null;
+  }
+  
+  statusMessage.value = "查询条件更改，重新查询";
 });
 
 watch(
