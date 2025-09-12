@@ -18,6 +18,23 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+.chart-container {
+  height: 400px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chart-container::-webkit-scrollbar {
+  display: none;
+}
+
+.dark .chart-container canvas {
+  filter: invert(0.9) hue-rotate(180deg);
+  background: transparent !important;
+}
+
 code,
 pre,
 textarea,

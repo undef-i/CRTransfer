@@ -429,12 +429,13 @@
                 </n-space>
               </template>
 
-              <!-- ECharts 渲染 -->
-              <div v-if="isEChartsResult(customResult)" style="height: 400px; overflow: auto; -webkit-overflow-scrolling: touch;">
-                <v-chart :option="customResult" style="height: 100%; width: 100%; min-width: 300px" />
+              <div v-if="isChartResult(customResult)" class="chart-container">
+                <canvas
+                  ref="chartCanvas"
+                  style="width: 100%; height: 100%"
+                ></canvas>
               </div>
-              
-              <!-- 原始JSON渲染 -->
+
               <n-code
                 v-else
                 :code="JSON.stringify(customResult, null, 2)"
@@ -858,6 +859,12 @@ const toggleTheme = () => {
   isDark.value = !isDark.value;
   localStorage.setItem("theme", isDark.value ? "dark" : "light");
 
+  if (isDark.value) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+
   window.dispatchEvent(
     new CustomEvent("theme-changed", {
       detail: { isDark: isDark.value },
@@ -909,6 +916,10 @@ onMounted(async () => {
       "(prefers-color-scheme: dark)"
     ).matches;
     isDark.value = prefersDark;
+  }
+
+  if (isDark.value) {
+    document.documentElement.classList.add("dark");
   }
 
   try {
@@ -1532,31 +1543,9 @@ const executeCustomQuery = async () => {
   }
 };
 
-import { load, keys, name } from './templates.js';
-import { use } from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
-import { 
-  TitleComponent, 
-  TooltipComponent, 
-  LegendComponent, 
-  GridComponent,
-  DatasetComponent
-} from 'echarts/components';
-import VChart from 'vue-echarts';
-
-use([
-  CanvasRenderer,
-  BarChart,
-  LineChart,
-  PieChart,
-  ScatterChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-  DatasetComponent
-]);
+import { load, keys, name } from "./templates.js";
+import { Chart, registerables } from "chart.js";
+Chart.register(...registerables);
 
 const loadCustomTemplate = (k) => {
   customCode.value = load(k);
@@ -1568,11 +1557,32 @@ const copyCustomResult = () => {
   }
 };
 
-const isEChartsResult = (result) => {
-  return result && 
-         typeof result === 'object' && 
-         (result.series || result.xAxis || result.yAxis || result.title);
+const isChartResult = (result) => {
+  return (
+    result &&
+    typeof result === "object" &&
+    (result.type === "bar" || result.type === "line" || result.type === "pie")
+  );
 };
+
+const chartInstance = ref(null);
+const chartCanvas = ref(null);
+
+watch(
+  [customResult, chartCanvas],
+  ([newResult, canvas]) => {
+    if (canvas && newResult && isChartResult(newResult)) {
+      if (chartInstance.value) {
+        chartInstance.value.destroy();
+      }
+
+      const ctx = canvas.getContext("2d");
+      chartInstance.value = new Chart(ctx, newResult);
+    }
+  },
+  { immediate: true }
+);
+
 let observer = null;
 onMounted(async () => {
   try {
