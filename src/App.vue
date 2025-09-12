@@ -414,20 +414,29 @@
                   style="width: 100%"
                 >
                   <n-text>查询结果</n-text>
-                  <n-button
-                    size="tiny"
-                    @click="copyCustomResult"
-                    quaternary
-                    type="primary"
-                  >
-                    <template #icon>
-                      <n-icon><CopyOutline /></n-icon>
-                    </template>
-                  </n-button>
+                  <n-space :size="8">
+                    <n-button
+                      size="tiny"
+                      @click="copyCustomResult"
+                      quaternary
+                      type="primary"
+                    >
+                      <template #icon>
+                        <n-icon><CopyOutline /></n-icon>
+                      </template>
+                    </n-button>
+                  </n-space>
                 </n-space>
               </template>
 
+              <!-- ECharts 渲染 -->
+              <div v-if="isEChartsResult(customResult)" style="height: 400px; overflow: auto; -webkit-overflow-scrolling: touch;">
+                <v-chart :option="customResult" style="height: 100%; width: 100%; min-width: 300px" />
+              </div>
+              
+              <!-- 原始JSON渲染 -->
               <n-code
+                v-else
                 :code="JSON.stringify(customResult, null, 2)"
                 language="json"
                 word-wrap
@@ -921,7 +930,7 @@ const progressValue = ref(0);
 const progressMax = ref(0);
 const running = ref(false);
 const ready = ref(false);
-const stopReason = ref(null); // 新增状态：null | 'manual' | 'interrupt'
+const stopReason = ref(null);
 const statusMessage = ref("正在初始化...");
 const version = ref("");
 const journeys = ref([]);
@@ -1211,9 +1220,7 @@ const initWorker = () => {
         progressValue.value = d.ld;
         progressMax.value = d.tt;
         break;
-      // in initWorker() -> w.onmessage
       case "j_fnd": {
-        // 终极防御：如果停止流程已启动，则忽略所有后续发来的方案片段。
         if (!running.value || stopReason.value !== null) return;
         const dataFromWorker = d;
         const journeyId = Math.random().toString(36).substring(2, 9);
@@ -1403,7 +1410,7 @@ const executeCustomQuery = async () => {
   if (!customCode.value.trim()) return;
 
   running.value = true;
-  statusMessage.value = "正在执行自定义查询...";
+  statusMessage.value = "";
   customResult.value = null;
 
   try {
@@ -1525,7 +1532,31 @@ const executeCustomQuery = async () => {
   }
 };
 
-import { load, keys, name } from "./templates.js";
+import { load, keys, name } from './templates.js';
+import { use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
+import { 
+  TitleComponent, 
+  TooltipComponent, 
+  LegendComponent, 
+  GridComponent,
+  DatasetComponent
+} from 'echarts/components';
+import VChart from 'vue-echarts';
+
+use([
+  CanvasRenderer,
+  BarChart,
+  LineChart,
+  PieChart,
+  ScatterChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DatasetComponent
+]);
 
 const loadCustomTemplate = (k) => {
   customCode.value = load(k);
@@ -1535,6 +1566,12 @@ const copyCustomResult = () => {
   if (customResult.value) {
     navigator.clipboard.writeText(JSON.stringify(customResult.value, null, 2));
   }
+};
+
+const isEChartsResult = (result) => {
+  return result && 
+         typeof result === 'object' && 
+         (result.series || result.xAxis || result.yAxis || result.title);
 };
 let observer = null;
 onMounted(async () => {
