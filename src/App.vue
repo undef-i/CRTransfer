@@ -210,7 +210,8 @@
                           >接口 <n-text code>qry('rdat')</n-text></n-text
                         >
                         <n-text style="font-size: 13px; line-height: 1.3"
-                          >返回: <n-text code>Array&lt;Train&gt;</n-text> - 列车对象的数组。</n-text
+                          >返回: <n-text code>Array&lt;Train&gt;</n-text> -
+                          列车对象的数组。</n-text
                         >
                         <n-space vertical :size="2" style="margin-left: 12px">
                           <n-text style="font-size: 13px; line-height: 1.3">
@@ -218,33 +219,62 @@
                           </n-text>
                           <n-space vertical :size="1" style="margin-left: 24px">
                             <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>tn</n-text>: <n-text code>String</n-text> - 车次号。
+                              • <n-text code>tn</n-text>:
+                              <n-text code>String</n-text> - 车次号。
                             </n-text>
                             <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>r</n-text>: <n-text code>Integer</n-text> - 运行周期总天数。
+                              • <n-text code>r</n-text>:
+                              <n-text code>Integer</n-text> - 运行周期总天数。
                             </n-text>
                             <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>p</n-text>: <n-text code>Integer</n-text> - 开行位掩码 (其二进制从右至左的每一位对应周期内一天的开行状态)。
+                              • <n-text code>p</n-text>:
+                              <n-text code>Integer</n-text> - 开行位掩码
+                              (其二进制从右至左的每一位对应周期内一天的开行状态)。
                             </n-text>
                             <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>s</n-text>: <n-text code>Array&lt;Station&gt;</n-text> - 经停站对象数组。
+                              • <n-text code>s</n-text>:
+                              <n-text code>Array&lt;Station&gt;</n-text> -
+                              经停站对象数组。
                             </n-text>
-                            <n-space vertical :size="1" style="margin-left: 36px">
+                            <n-space
+                              vertical
+                              :size="1"
+                              style="margin-left: 36px"
+                            >
                               <n-text style="font-size: 13px; line-height: 1.3">
                                 <n-text code>Station</n-text> 对象:
                               </n-text>
-                              <n-space vertical :size="1" style="margin-left: 48px">
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>id</n-text>: <n-text code>Integer</n-text> - 车站 ID。
+                              <n-space
+                                vertical
+                                :size="1"
+                                style="margin-left: 48px"
+                              >
+                                <n-text
+                                  style="font-size: 13px; line-height: 1.3"
+                                >
+                                  - <n-text code>id</n-text>:
+                                  <n-text code>Integer</n-text> - 车站 ID。
                                 </n-text>
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>n</n-text>: <n-text code>String</n-text> - 站名。
+                                <n-text
+                                  style="font-size: 13px; line-height: 1.3"
+                                >
+                                  - <n-text code>n</n-text>:
+                                  <n-text code>String</n-text> - 站名。
                                 </n-text>
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>a</n-text> / <n-text code>d</n-text>: <n-text code>Integer</n-text> - 到达/出发时间 (从始发日00:00起计的总分钟数)。
+                                <n-text
+                                  style="font-size: 13px; line-height: 1.3"
+                                >
+                                  - <n-text code>a</n-text> /
+                                  <n-text code>d</n-text>:
+                                  <n-text code>Integer</n-text> - 到达/出发时间
+                                  (从始发日00:00起计的总分钟数)。
                                 </n-text>
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>km</n-text>: <n-text code>Integer</n-text> - 累计里程 (公里)。
+                                <n-text
+                                  style="font-size: 13px; line-height: 1.3"
+                                >
+                                  - <n-text code>km</n-text>:
+                                  <n-text code>Integer</n-text> - 累计里程
+                                  (公里)。
                                 </n-text>
                               </n-space>
                             </n-space>
@@ -257,7 +287,9 @@
                           >接口 <n-text code>qry('scdat')</n-text></n-text
                         >
                         <n-text style="font-size: 13px; line-height: 1.3"
-                          >返回: <n-text code>{ g: Array&lt;Group&gt; }</n-text> - 包含分组列表的对象。</n-text
+                          >返回:
+                          <n-text code>{ g: Array&lt;Group&gt; }</n-text> -
+                          包含分组列表的对象。</n-text
                         >
                         <n-space vertical :size="2" style="margin-left: 12px">
                           <n-text style="font-size: 13px; line-height: 1.3">
@@ -265,15 +297,28 @@
                           </n-text>
                           <n-space vertical :size="1" style="margin-left: 24px">
                             <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>s</n-text>: <n-text code>Array&lt;StationSimple&gt;</n-text> - 同组车站对象数组。
+                              • <n-text code>s</n-text>:
+                              <n-text code>Array&lt;StationSimple&gt;</n-text> -
+                              同组车站对象数组。
                             </n-text>
-                            <n-space vertical :size="1" style="margin-left: 36px">
+                            <n-space
+                              vertical
+                              :size="1"
+                              style="margin-left: 36px"
+                            >
                               <n-text style="font-size: 13px; line-height: 1.3">
                                 <n-text code>StationSimple</n-text> 对象:
                               </n-text>
-                              <n-space vertical :size="1" style="margin-left: 48px">
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>n</n-text>: <n-text code>String</n-text> - 站名。
+                              <n-space
+                                vertical
+                                :size="1"
+                                style="margin-left: 48px"
+                              >
+                                <n-text
+                                  style="font-size: 13px; line-height: 1.3"
+                                >
+                                  - <n-text code>n</n-text>:
+                                  <n-text code>String</n-text> - 站名。
                                 </n-text>
                               </n-space>
                             </n-space>
@@ -286,18 +331,13 @@
                   <n-space vertical :size="12">
                     <n-space :size="8" wrap>
                       <n-button
+                        v-for="k in keys()"
+                        :key="k"
                         size="small"
-                        @click="loadCustomTemplate('topStations')"
+                        @click="loadCustomTemplate(k)"
                         :disabled="!ready"
                       >
-                        车次最多的站
-                      </n-button>
-                      <n-button
-                        size="small"
-                        @click="loadCustomTemplate('trainTypeStations')"
-                        :disabled="!ready"
-                      >
-                        车次类型最多的站
+                        {{ name(k) }}
                       </n-button>
                     </n-space>
                   </n-space>
@@ -881,6 +921,7 @@ const progressValue = ref(0);
 const progressMax = ref(0);
 const running = ref(false);
 const ready = ref(false);
+const stopReason = ref(null); // 新增状态：null | 'manual' | 'interrupt'
 const statusMessage = ref("正在初始化...");
 const version = ref("");
 const journeys = ref([]);
@@ -1170,8 +1211,10 @@ const initWorker = () => {
         progressValue.value = d.ld;
         progressMax.value = d.tt;
         break;
+      // in initWorker() -> w.onmessage
       case "j_fnd": {
-        if (!running.value) return;
+        // 终极防御：如果停止流程已启动，则忽略所有后续发来的方案片段。
+        if (!running.value || stopReason.value !== null) return;
         const dataFromWorker = d;
         const journeyId = Math.random().toString(36).substring(2, 9);
         rawJourneyBuffer.set(journeyId, dataFromWorker);
@@ -1190,8 +1233,6 @@ const initWorker = () => {
       }
       case "done":
         finishSearch();
-        if (journeys.value.length === 0) statusMessage.value = "无方案";
-        else statusMessage.value = `共 ${journeys.value.length} 条方案`;
         break;
       case "err":
         statusMessage.value = `错误: ${d}`;
@@ -1248,6 +1289,14 @@ const startSearch = () => {
   displayCount.value = BATCH_SIZE;
   if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
   bufferUpdateInterval = setInterval(() => {
+    if (stopReason.value !== null) {
+      if (bufferUpdateInterval) {
+        clearInterval(bufferUpdateInterval);
+        bufferUpdateInterval = null;
+      }
+      return;
+    }
+
     if (journeyResultBuffer.length > 0) {
       journeys.value.push(...journeyResultBuffer);
       journeyResultBuffer = [];
@@ -1272,28 +1321,63 @@ const startSearch = () => {
 };
 const finishSearch = () => {
   if (!running.value) return;
-  running.value = false;
+  console.log(
+    `%c[2] finishSearch called. Reading stopReason: '${stopReason.value}'`,
+    "color: lightblue; font-weight: bold;"
+  );
+
   if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
   bufferUpdateInterval = null;
   if (journeyResultBuffer.length > 0) {
     journeys.value.push(...journeyResultBuffer);
     journeyResultBuffer = [];
   }
-  if (journeys.value.length > 0) {
-    statusMessage.value = `查询完成，共找到 ${journeys.value.length} 条方案`;
-  } else if (statusMessage.value.includes("查询")) {
-    statusMessage.value = "查询已停止";
+
+  switch (stopReason.value) {
+    case "interrupt":
+      break;
+    case "manual":
+      statusMessage.value = "查询已停止";
+      break;
+    default:
+      if (journeys.value.length > 0) {
+        statusMessage.value = `查询完成，共找到 ${journeys.value.length} 条方案`;
+      } else {
+        statusMessage.value = "无方案";
+      }
+      break;
   }
+
+  running.value = false;
+  stopReason.value = null;
 };
-const stopSearch = () => {
+const stopSearch = (reason = "manual") => {
   if (running.value && w) {
+    console.log(
+      `%c[1] Setting stopReason to: '${reason}'`,
+      "color: orange; font-weight: bold;"
+    );
+
+    stopReason.value = reason;
     w.postMessage({ t: "stop" });
   }
 };
 const handlePrimaryButtonClick = async () => {
   if (running.value) {
-    stopSearch();
-    return;
+    stopSearch("interrupt");
+
+    if (bufferUpdateInterval) {
+      clearInterval(bufferUpdateInterval);
+      bufferUpdateInterval = null;
+    }
+  }
+  if (journeys.value.length > 0) {
+    journeys.value = [];
+    rawJourneyBuffer.clear();
+    displayCount.value = 0;
+  }
+  if (customResult.value !== null) {
+    customResult.value = null;
   }
 
   if (mode.value === "custom") {
@@ -1325,13 +1409,13 @@ const executeCustomQuery = async () => {
   try {
     const createCancellableQueryAPI = () => {
       let cancelled = false;
-      
+
       const checkCancelled = () => {
         if (cancelled || !running.value) {
-          throw new Error('查询已取消');
+          throw new Error("查询已取消");
         }
       };
-      
+
       return {
         trains: async (key = "") => {
           checkCancelled();
@@ -1343,13 +1427,13 @@ const executeCustomQuery = async () => {
               d: { t: "rdat", k: key },
               requestId,
             });
-            
+
             const interval = setInterval(() => {
               if (cancelled || !running.value) {
                 clearInterval(interval);
                 if (gtsPromiseMap.has(requestId)) {
                   gtsPromiseMap.delete(requestId);
-                  reject(new Error('查询已取消'));
+                  reject(new Error("查询已取消"));
                 }
               }
             }, 100);
@@ -1365,13 +1449,13 @@ const executeCustomQuery = async () => {
               d: { t: "scdat", k: key },
               requestId,
             });
-            
+
             const interval = setInterval(() => {
               if (cancelled || !running.value) {
                 clearInterval(interval);
                 if (gtsPromiseMap.has(requestId)) {
                   gtsPromiseMap.delete(requestId);
-                  reject(new Error('查询已取消'));
+                  reject(new Error("查询已取消"));
                 }
               }
             }, 100);
@@ -1394,14 +1478,14 @@ const executeCustomQuery = async () => {
         },
         cancel: () => {
           cancelled = true;
-        }
+        },
       };
     };
 
     const queryAPI = createCancellableQueryAPI();
-    
+
     if (!running.value) {
-      throw new Error('查询已取消');
+      throw new Error("查询已取消");
     }
 
     const AsyncFunction = Object.getPrototypeOf(
@@ -1422,15 +1506,15 @@ const executeCustomQuery = async () => {
       queryAPI.qry,
       JSON
     );
-    
+
     if (!running.value) {
-      throw new Error('查询已取消');
+      throw new Error("查询已取消");
     }
-    
+
     customResult.value = result;
     statusMessage.value = "";
   } catch (error) {
-    if (error.message === '查询已取消') {
+    if (error.message === "查询已取消") {
       statusMessage.value = "查询已停止";
       customResult.value = null;
     } else {
@@ -1441,53 +1525,10 @@ const executeCustomQuery = async () => {
   }
 };
 
-const loadCustomTemplate = (type) => {
-  const templates = {
-    topStations: `// 查询车次最多的 20 个站
-const trainData = await qry('rdat');
-const stationCounts = {};
+import { load, keys, name } from "./templates.js";
 
-trainData.forEach(train => {
-  train.s.forEach(station => {
-    stationCounts[station.n] = (stationCounts[station.n] || 0) + 1;
-  });
-});
-
-return Object.entries(stationCounts)
-  .map(([station, count]) => ({ station, count }))
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 20);`,
-
-    trainTypeStations: `// 查询车次类型最多的 10 个站
-const trainData = await qry('rdat');
-const stationTrainTypes = {};
-
-function getTrainType(trainNumber) {
-  const firstChar = trainNumber.charAt(0);
-  return isNaN(parseInt(firstChar)) ? firstChar : 'Number';
-}
-
-trainData.forEach(train => {
-  const trainType = getTrainType(train.tn);
-  train.s.forEach(station => {
-    if (!stationTrainTypes[station.n]) {
-      stationTrainTypes[station.n] = new Set();
-    }
-    stationTrainTypes[station.n].add(trainType);
-  });
-});
-
-return Object.entries(stationTrainTypes)
-  .map(([station, types]) => ({
-    station,
-    typeCount: types.size,
-    types: Array.from(types).sort()
-  }))
-  .sort((a, b) => b.typeCount - a.typeCount)
-  .slice(0, 10);`,
-  };
-
-  customCode.value = templates[type] || "";
+const loadCustomTemplate = (k) => {
+  customCode.value = load(k);
 };
 
 const copyCustomResult = () => {
@@ -1539,16 +1580,20 @@ onBeforeUnmount(() => {
   gtsPromiseMap.clear();
 });
 watch([mode, mtt, escOrigin, escDestination], () => {
+  if (running.value) {
+    stopSearch("interrupt");
+  }
+
   if (journeys.value.length > 0) {
     journeys.value = [];
     rawJourneyBuffer.clear();
     displayCount.value = 0;
   }
-  
+
   if (customResult.value !== null) {
     customResult.value = null;
   }
-  
+
   statusMessage.value = "查询条件更改，重新查询";
 });
 
