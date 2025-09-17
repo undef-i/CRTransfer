@@ -187,6 +187,15 @@ textarea,
     }
 }
 
+/* 模板编辑按钮图标颜色 */
+.template-edit-icon {
+  color: #666 !important;
+}
+
+.template-edit-icon.selected {
+  color: #fff !important;
+}
+
 
 
 .segment-content {

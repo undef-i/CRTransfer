@@ -331,13 +331,119 @@
                   <n-space vertical :size="12">
                     <n-space :size="8" wrap>
                       <n-button
-                        v-for="k in keys()"
-                        :key="k"
+                        v-for="(template, key) in allTemplates"
+                        :key="key"
                         size="small"
-                        @click="loadCustomTemplate(k)"
+                        @click="selectTemplate(key)"
                         :disabled="!ready"
+                        :type="
+                          selectedTemplate === key
+                            ? 'primary'
+                            : template.type === 'user'
+                            ? 'default'
+                            : 'default'
+                        "
+                        style="position: relative; transition: all 0.2s"
+                        @mouseenter="hoveringTemplate = key"
+                        @mouseleave="hoveringTemplate = null"
                       >
-                        {{ name(k) }}
+                        <div
+                          style="
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 4px;
+                            position: relative;
+                          "
+                        >
+                          <span
+                            v-if="editingTemplate !== key"
+                            @click.stop="selectTemplate(key)"
+                            @dblclick.stop="
+                              startEditTemplate(key, template.name)
+                            "
+                            style="
+                              cursor: pointer;
+                              box-sizing: border-box;
+                              line-height: 1;
+                              display: inline-block;
+                              vertical-align: baseline;
+                            "
+                            >{{ template.name }}</span
+                          >
+                          <span
+                            v-else
+                            contenteditable="true"
+                            @blur="saveTemplateEdit(key)"
+                            @keydown.enter.prevent="saveTemplateEdit(key)"
+                            @click.stop=""
+                            style="
+                              background: transparent;
+                              outline: none;
+                              color: inherit;
+                              font-size: inherit;
+                              font-family: inherit;
+                              padding: 0;
+                              margin: 0;
+                              display: inline-block;
+                              vertical-align: baseline;
+                              line-height: 1;
+                              box-sizing: border-box;
+                            "
+                            ref="editableSpan"
+                            >{{ editingName }}</span
+                          >
+                          <n-button
+                            v-if="template.type === 'user'"
+                            size="tiny"
+                            @click.stop="
+                              editingTemplate === key
+                                ? saveTemplateEdit(key)
+                                : startEditTemplate(key, template.name)
+                            "
+                            :disabled="!ready"
+                            quaternary
+                            circle
+                            style="
+                              padding: 0;
+                              width: 16px;
+                              height: 16px;
+                              opacity: 0.8;
+                              transition: opacity 0.2s;
+                              margin-left: 2px;
+                              border: none !important;
+                              box-shadow: none !important;
+                            "
+                          >
+                            <n-icon
+                              :style="{
+                                fontSize: '12px',
+                                color:
+                                  selectedTemplate === key ? '#fff' : '#666',
+                              }"
+                            >
+                              <component
+                                :is="
+                                  editingTemplate === key
+                                    ? CheckmarkOutline
+                                    : CreateOutline
+                                "
+                                :style="{
+                                  color:
+                                    selectedTemplate === key ? '#fff' : '#666',
+                                }"
+                              />
+                            </n-icon>
+                          </n-button>
+                        </div>
+                      </n-button>
+                      <n-button
+                        size="small"
+                        @click="addQuickTemplate"
+                        :disabled="!ready"
+                        type="default"
+                        circle
+                      >
+                        <n-icon><AddOutline /></n-icon>
                       </n-button>
                     </n-space>
                   </n-space>
@@ -628,7 +734,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, provide } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+  provide,
+  nextTick,
+} from "vue";
 import {
   darkTheme,
   NConfigProvider,
@@ -675,7 +789,14 @@ import {
   LogoGithub,
   CopyOutline,
 } from "@vicons/ionicons5";
-import { SunnyOutline, MoonOutline } from "@vicons/ionicons5";
+import {
+  SunnyOutline,
+  MoonOutline,
+  StarOutline,
+  AddOutline,
+  CreateOutline,
+  CheckmarkOutline,
+} from "@vicons/ionicons5";
 import MapRenderer from "./MapRenderer.vue";
 import { pinyin } from "pinyin-pro";
 
@@ -851,6 +972,10 @@ const swapOriginDestination = () => {
 };
 
 const isDark = ref(true);
+const editingTemplate = ref(null);
+const editingName = ref("");
+const hoveringTemplate = ref(null);
+const selectedTemplate = ref(null);
 
 const currentTheme = computed(() => (isDark.value ? darkTheme : null));
 const currentThemeOverrides = computed(() => (isDark.value ? null : null));
@@ -935,7 +1060,7 @@ const destination = ref("");
 const escOrigin = ref(false);
 const escDestination = ref(false);
 const mode = ref("time");
-const mtt = ref(0);
+const mtt = ref();
 const progressVisible = ref(false);
 const progressValue = ref(0);
 const progressMax = ref(0);
@@ -958,6 +1083,25 @@ let bufferUpdateInterval = null;
 
 const customCode = ref("");
 const customResult = ref(null);
+const allTemplates = ref({});
+
+watch(customCode, (newCode) => {
+  if (
+    selectedTemplate.value &&
+    allTemplates.value[selectedTemplate.value]?.type === "user"
+  ) {
+    const template = allTemplates.value[selectedTemplate.value];
+    if (template) {
+      template.code = newCode;
+
+      const userTemplates = loadUserTemplates();
+      if (userTemplates[selectedTemplate.value]) {
+        userTemplates[selectedTemplate.value].code = newCode;
+        saveUserTemplates(userTemplates);
+      }
+    }
+  }
+});
 
 const primaryButtonIcon = computed(() =>
   running.value ? StopCircleOutline : SearchOutline
@@ -1547,9 +1691,162 @@ import { load, keys, name } from "./templates.js";
 import { Chart, registerables } from "chart.js";
 Chart.register(...registerables);
 
-const loadCustomTemplate = (k) => {
-  customCode.value = load(k);
+const CUSTOM_TEMPLATES_KEY = "user_custom_templates";
+
+const loadUserTemplates = () => {
+  try {
+    const saved = localStorage.getItem(CUSTOM_TEMPLATES_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    return {};
+  }
 };
+
+const saveUserTemplates = (templates) => {
+  try {
+    localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(templates));
+  } catch (e) {
+    console.error("保存用户模板失败:", e);
+  }
+};
+
+const addUserTemplate = (name, code) => {
+  const templates = loadUserTemplates();
+  const key = "user_" + Date.now();
+  templates[key] = {
+    name: name,
+    code: code,
+    createdAt: new Date().toISOString(),
+  };
+  saveUserTemplates(templates);
+  return key;
+};
+
+const deleteUserTemplate = (key) => {
+  const templates = loadUserTemplates();
+  delete templates[key];
+  saveUserTemplates(templates);
+};
+
+const getAllTemplates = () => {
+  const systemTemplates = {};
+  const userTemplates = loadUserTemplates();
+
+  keys().forEach((key) => {
+    systemTemplates[key] = {
+      name: name(key),
+      code: load(key),
+      type: "system",
+    };
+  });
+
+  Object.entries(userTemplates).forEach(([key, template]) => {
+    systemTemplates[key] = {
+      ...template,
+      type: "user",
+    };
+  });
+
+  return systemTemplates;
+};
+
+const loadCustomTemplate = (key) => {
+  const templates = getAllTemplates();
+  const template = templates[key];
+  if (template && template.code) {
+    customCode.value = template.code;
+  }
+};
+
+const selectTemplate = (key) => {
+  if (allTemplates.value[key]?.type === "user") {
+    selectedTemplate.value = key;
+    loadCustomTemplate(key);
+  }
+};
+
+const addQuickTemplate = () => {
+  const defaultName = "Script " + new Date().toLocaleTimeString();
+  addUserTemplate(defaultName, "");
+  refreshTemplates();
+};
+
+const startEditTemplate = (key, name) => {
+  if (allTemplates.value[key]?.type === "user") {
+    editingTemplate.value = key;
+    editingName.value = name;
+
+    nextTick(() => {
+      const editableSpans = document.querySelectorAll(
+        '[contenteditable="true"]'
+      );
+      const currentSpan = Array.from(editableSpans).find((span) =>
+        span.closest(".n-button")
+      );
+      if (currentSpan) {
+        currentSpan.focus();
+        const range = document.createRange();
+        range.selectNodeContents(currentSpan);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    });
+  }
+};
+
+const saveTemplateEdit = (key) => {
+  const editableSpans = document.querySelectorAll('[contenteditable="true"]');
+  const currentSpan = Array.from(editableSpans).find((span) =>
+    span.closest(".n-button")
+  );
+
+  const newName = currentSpan
+    ? currentSpan.textContent.trim()
+    : editingName.value.trim();
+
+  if (allTemplates.value[key]) {
+    if (newName) {
+      const template = allTemplates.value[key];
+      template.name = newName;
+
+      const userTemplates = loadUserTemplates();
+
+      if (userTemplates[key]) {
+        userTemplates[key].name = newName;
+        saveUserTemplates(userTemplates);
+      } else {
+        userTemplates[key] = { name: newName, code: template.code };
+        saveUserTemplates(userTemplates);
+      }
+    } else {
+      const userTemplates = loadUserTemplates();
+      if (userTemplates[key]) {
+        delete userTemplates[key];
+        saveUserTemplates(userTemplates);
+      }
+
+      if (selectedTemplate.value === key) {
+        selectedTemplate.value = null;
+      }
+    }
+
+    refreshTemplates();
+  }
+
+  editingTemplate.value = null;
+  editingName.value = "";
+
+  nextTick(() => {
+    window.getSelection()?.removeAllRanges();
+  });
+};
+
+const refreshTemplates = () => {
+  allTemplates.value = getAllTemplates();
+};
+
+refreshTemplates();
 
 const copyCustomResult = () => {
   if (customResult.value) {
