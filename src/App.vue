@@ -329,7 +329,7 @@
                   </n-collapse>
 
                   <n-space vertical :size="12">
-                    <n-space :size="8" wrap>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                       <n-button
                         v-for="(template, key) in allTemplates"
                         :key="key"
@@ -343,7 +343,7 @@
                             ? 'default'
                             : 'default'
                         "
-                        style="position: relative; transition: all 0.2s"
+                        style="position: relative; transition: all 0.2s; flex: 1; min-width: fit-content;"
                         @mouseenter="hoveringTemplate = key"
                         @mouseleave="hoveringTemplate = null"
                       >
@@ -456,7 +456,7 @@
                       >
                         <n-icon><AddOutline /></n-icon>
                       </n-button>
-                    </n-space>
+                    </div>
                   </n-space>
 
                   <n-space vertical :size="12">
