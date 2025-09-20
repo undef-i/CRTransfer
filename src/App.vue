@@ -357,7 +357,6 @@
                         >
                           <span
                             v-if="editingTemplate !== key"
-                            @click.stop="selectTemplate(key)"
                             @dblclick.stop="
                               startEditTemplate(key, template.name)
                             "
@@ -418,7 +417,13 @@
                               :style="{
                                 fontSize: '12px',
                                 color:
-                                  selectedTemplate === key ? '#fff' : '#666',
+                                  selectedTemplate === key
+                                    ? isDark
+                                      ? '#000'
+                                      : '#fff'
+                                    : isDark
+                                    ? '#fff'
+                                    : '#666',
                               }"
                             >
                               <component
@@ -429,7 +434,13 @@
                                 "
                                 :style="{
                                   color:
-                                    selectedTemplate === key ? '#fff' : '#666',
+                                    selectedTemplate === key
+                                      ? isDark
+                                        ? '#000'
+                                        : '#fff'
+                                      : isDark
+                                      ? '#fff'
+                                      : '#666',
                                 }"
                               />
                             </n-icon>
@@ -1732,6 +1743,7 @@ const getAllTemplates = () => {
   const systemTemplates = {};
   const userTemplates = loadUserTemplates();
 
+  console.log("Available system template keys:", keys());
   keys().forEach((key) => {
     systemTemplates[key] = {
       name: name(key),
@@ -1747,6 +1759,7 @@ const getAllTemplates = () => {
     };
   });
 
+  console.log("All templates:", systemTemplates);
   return systemTemplates;
 };
 
@@ -1759,7 +1772,8 @@ const loadCustomTemplate = (key) => {
 };
 
 const selectTemplate = (key) => {
-  if (allTemplates.value[key]?.type === "user") {
+  console.log("Selecting template:", key, allTemplates.value[key]);
+  if (allTemplates.value[key]) {
     selectedTemplate.value = key;
     loadCustomTemplate(key);
   }
