@@ -208,8 +208,30 @@ function getDataViewMemory0() {
     return cachedDataViewMemory0;
 }
 
-export function stop() {
-    wasm.stop();
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_export_2.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
+}
+
+export function init() {
+    const ret = wasm.init();
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * @returns {string}
+ */
+export function qry_rdat() {
+    const ret = wasm.qry_rdat();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
+    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
+    return v1;
 }
 
 /**
@@ -229,22 +251,24 @@ export function find_mx(o, d, mtt, esc_o, esc_d) {
     return ret;
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_export_2.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
+export function stop() {
+    wasm.stop();
 }
+
 /**
- * @returns {string}
+ * @param {string} tn
+ * @param {number} dtr
+ * @param {number} atr
+ * @returns {any}
  */
-export function qry_scdat() {
-    const ret = wasm.qry_scdat();
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
+export function gts(tn, dtr, atr) {
+    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.gts(ptr0, len0, dtr, atr);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
-    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
-    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
-    return v1;
+    return takeFromExternrefTable0(ret[0]);
 }
 
 function getArrayJsValueFromWasm0(ptr, len) {
@@ -271,26 +295,6 @@ export function g_stns() {
 }
 
 /**
- * @returns {string}
- */
-export function qry_rdat() {
-    const ret = wasm.qry_rdat();
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
-    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
-    return v1;
-}
-
-export function init() {
-    const ret = wasm.init();
-    if (ret[1]) {
-        throw takeFromExternrefTable0(ret[0]);
-    }
-}
-
-/**
  * @param {string} o
  * @param {string} d
  * @param {boolean} esc_o
@@ -304,6 +308,19 @@ export function find_k(o, d, esc_o, esc_d) {
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d);
     return ret;
+}
+
+/**
+ * @returns {string}
+ */
+export function qry_scdat() {
+    const ret = wasm.qry_scdat();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
+    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
+    return v1;
 }
 
 /**
@@ -323,28 +340,12 @@ export function find(o, d, mtt, esc_o, esc_d) {
     return ret;
 }
 
-/**
- * @param {string} tn
- * @param {number} dtr
- * @param {number} atr
- * @returns {any}
- */
-export function gts(tn, dtr, atr) {
-    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.gts(ptr0, len0, dtr, atr);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
 function __wbg_adapter_20(arg0, arg1, arg2) {
     wasm.closure41_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_38(arg0, arg1, arg2, arg3) {
-    wasm.closure26_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_46(arg0, arg1, arg2, arg3) {
+    wasm.closure25_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 async function __wbg_load(module, imports) {
@@ -416,7 +417,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return __wbg_adapter_38(a, state0.b, arg0, arg1);
+                    return __wbg_adapter_46(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
