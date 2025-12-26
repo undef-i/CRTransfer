@@ -4,13 +4,11 @@
     margin: 10px 0;
 }
 
-
 html,
 body {
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: #0d1117;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
         'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
         sans-serif;
@@ -19,20 +17,20 @@ body {
 }
 
 .chart-container {
-  height: 400px;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+    height: 400px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .chart-container::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 .dark .chart-container canvas {
-  filter: invert(0.9) hue-rotate(180deg);
-  background: transparent !important;
+    filter: invert(0.9) hue-rotate(180deg);
+    background: transparent !important;
 }
 
 code,
@@ -187,13 +185,12 @@ textarea,
     }
 }
 
-/* 模板编辑按钮图标颜色 */
 .template-edit-icon {
-  color: #666 !important;
+    color: #666 !important;
 }
 
 .template-edit-icon.selected {
-  color: #fff !important;
+    color: #fff !important;
 }
 
 
