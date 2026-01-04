@@ -67,7 +67,7 @@ self.on_jny = function (jstr) {
 };
 
 self.onmessage = async function (e) {
-    const { t, o, d, mtt, esc_o, esc_d, requestId } = e.data;
+    const { t, o, d, mtt, esc_o, esc_d, tf, requestId } = e.data;
 
     try {
         if (t === "stop") {
@@ -85,15 +85,15 @@ self.onmessage = async function (e) {
 
         if (t === "start") {
             self.postMessage({ t: "stat", d: "..." });
-            await wm.find(o, d, mtt, esc_o, esc_d);
+            await wm.find(o, d, mtt, esc_o, esc_d, tf || "");
             self.postMessage({ t: "done" });
         } else if (t === "start_mx") {
             self.postMessage({ t: "stat", d: "..." });
-            await wm.find_mx(o, d, mtt, esc_o, esc_d);
+            await wm.find_mx(o, d, mtt, esc_o, esc_d, tf || "");
             self.postMessage({ t: "done" });
         } else if (t === "start_k") {
             self.postMessage({ t: "stat", d: "..." });
-            await wm.find_k(o, d, esc_o, esc_d);
+            await wm.find_k(o, d, esc_o, esc_d, tf || "");
             self.postMessage({ t: "done" });
         } else if (t === "init_only") {
             self.postMessage({ t: "init_done" });

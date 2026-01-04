@@ -297,6 +297,15 @@ fn rst_stop() {
         *s.borrow_mut() = false;
     });
 }
+fn tn_ok(tn: &str, tf: &str) -> bool {
+    if tf.is_empty() { return true; }
+    let c = tn.chars().next().unwrap_or('0');
+    if c.is_ascii_digit() {
+        tf.contains('N')
+    } else {
+        tf.contains(c.to_ascii_uppercase())
+    }
+}
 fn g_sid(s: &str) -> Option<usize> {
     S2I.with(|d| d.borrow().as_ref()?.get(s).copied())
 }
@@ -498,7 +507,7 @@ async fn sleep(ms: i32) -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
+pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
     let rfs = DAT
         .with(|dat| dat.borrow().as_ref().cloned())
@@ -516,6 +525,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
+                if !tn_ok(&r.tn, tf) { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     pq.push(St {
                         tdur: r.dur,
@@ -571,6 +581,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Resul
                 if is_stopped() {
                     break;
                 }
+                if !tn_ok(&next_r.tn, tf) { continue; }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -616,7 +627,7 @@ fn mk_path_mx(st: &StMx) -> Vec<PS> {
     mk_p_base(st, |s| (s.p.clone(), s.r.clone(), s.aat))
 }
 #[wasm_bindgen(js_name = find_mx)]
-pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
+pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
     let rfs = DAT
         .with(|dat| dat.borrow().as_ref().cloned())
@@ -634,6 +645,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
+                if !tn_ok(&r.tn, tf) { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     q.push_back(StMx {
                         tdur: r.dur,
@@ -691,6 +703,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
                 if is_stopped() {
                     break;
                 }
+                if !tn_ok(&next_r.tn, tf) { continue; }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -741,7 +754,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool) -> Re
     Ok(())
 }
 #[wasm_bindgen(js_name = find_k)]
-pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool) -> Result<(), JsValue> {
+pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
     let rfs = DAT
         .with(|dat| dat.borrow().as_ref().cloned())
@@ -759,6 +772,7 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool) -> Result<(), Js
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
+                if !tn_ok(&r.tn, tf) { continue; }
                 pq.push(StK {
                     tkm: r.km,
                     sid: r.al,
@@ -803,6 +817,7 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool) -> Result<(), Js
                 if is_stopped() {
                     break;
                 }
+                if !tn_ok(&next_r.tn, tf) { continue; }
                 let new_tkm = c.tkm + next_r.km;
                 pq.push(StK {
                     tkm: new_tkm,

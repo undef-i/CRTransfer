@@ -155,6 +155,81 @@
               </n-button-group>
 
               <n-collapse-transition :show="mode !== 'custom'">
+                <n-button-group class="full-width-responsive-group" style="margin-bottom: 12px;">
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('G') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('G')"
+                    @click="toggleTrainFilter('G')"
+                  >
+                    G
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('D') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('D')"
+                    @click="toggleTrainFilter('D')"
+                  >
+                    D
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('C') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('C')"
+                    @click="toggleTrainFilter('C')"
+                  >
+                    C
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('K') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('K')"
+                    @click="toggleTrainFilter('K')"
+                  >
+                    K
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('T') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('T')"
+                    @click="toggleTrainFilter('T')"
+                  >
+                    T
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('Z') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('Z')"
+                    @click="toggleTrainFilter('Z')"
+                  >
+                    Z
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('Y') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('Y')"
+                    @click="toggleTrainFilter('Y')"
+                  >
+                    Y
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('S') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('S')"
+                    @click="toggleTrainFilter('S')"
+                  >
+                    S
+                  </n-button>
+                  <n-button
+                    size="small"
+                    :type="trainFilter.includes('NUM') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('NUM')"
+                    @click="toggleTrainFilter('NUM')"
+                  >
+                    普
+                  </n-button>
+                </n-button-group>
+
                 <div class="trip-planner-container">
                   <div class="input-group">
                     <n-auto-complete
@@ -472,7 +547,6 @@
                 </n-space>
               </n-collapse-transition>
 
-              <n-divider style="margin: 0" />
 
               <div class="search-actions-container">
                 <n-collapse-transition
@@ -982,6 +1056,15 @@ const swapOriginDestination = () => {
   ];
 };
 
+const toggleTrainFilter = (type) => {
+  const index = trainFilter.value.indexOf(type);
+  if (index > -1) {
+    trainFilter.value.splice(index, 1);
+  } else {
+    trainFilter.value.push(type);
+  }
+};
+
 const isDark = ref(true);
 const editingTemplate = ref(null);
 const editingName = ref("");
@@ -1071,6 +1154,7 @@ const destination = ref("");
 const escOrigin = ref(false);
 const escDestination = ref(false);
 const mode = ref("time");
+const trainFilter = ref(['G', 'D', 'C', 'K', 'T', 'Z', 'Y', 'S', 'NUM']);
 const mtt = ref();
 const progressVisible = ref(false);
 const progressValue = ref(0);
@@ -1490,6 +1574,7 @@ const startSearch = () => {
         ? "start_mx"
         : "start",
     mtt: parseInt(mtt.value) || 0,
+    tf: trainFilter.value.map(x => x === 'NUM' ? 'N' : x).join(''),
   });
 };
 const finishSearch = () => {
@@ -1543,10 +1628,12 @@ const handlePrimaryButtonClick = async () => {
       clearInterval(bufferUpdateInterval);
       bufferUpdateInterval = null;
     }
+    journeyResultBuffer = [];
   }
   if (journeys.value.length > 0) {
     journeys.value = [];
     rawJourneyBuffer.clear();
+    journeyResultBuffer = [];
     displayCount.value = 0;
   }
   if (customResult.value !== null) {
