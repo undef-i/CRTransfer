@@ -113,7 +113,7 @@
       >
         <n-space vertical :size="24">
           <n-alert type="warning" :show-icon="true">
-            站点位置信息来源网络，目前有较多错漏，仅供辅助参考。数据有效期至
+            站点位置信息来源网络，仅供辅助参考。数据有效期至
             {{ version.slice(0, 4) }} 年 {{ version.slice(4, 6) }} 月
             {{ version.slice(6, 8) }} 日。
           </n-alert>
@@ -1154,7 +1154,7 @@ const destination = ref("");
 const escOrigin = ref(false);
 const escDestination = ref(false);
 const mode = ref("time");
-const trainFilter = ref(['G', 'D', 'C', 'K', 'T', 'Z', 'Y', 'S', 'NUM']);
+const trainFilter = ref([]);
 const mtt = ref();
 const progressVisible = ref(false);
 const progressValue = ref(0);
