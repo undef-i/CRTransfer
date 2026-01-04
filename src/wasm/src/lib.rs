@@ -297,14 +297,20 @@ fn rst_stop() {
         *s.borrow_mut() = false;
     });
 }
-fn tn_ok(tn: &str, tf: &str) -> bool {
-    if tf.is_empty() { return true; }
-    let c = tn.chars().next().unwrap_or('0');
-    if c.is_ascii_digit() {
-        tf.contains('N')
-    } else {
-        tf.contains(c.to_ascii_uppercase())
+fn build_tf_table(tf: &str) -> [bool; 256] {
+    let mut table = [false; 256];
+    if tf.is_empty() {
+        for i in 0..256 { table[i] = true; }
+        return table;
     }
+    for b in tf.bytes() {
+        if b == b'N' {
+             for dig in b'0'..=b'9' { table[dig as usize] = true; }
+        } else {
+             table[b as usize] = true;
+        }
+    }
+    table
 }
 fn g_sid(s: &str) -> Option<usize> {
     S2I.with(|d| d.borrow().as_ref()?.get(s).copied())
@@ -520,12 +526,13 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
     } else {
         [did].into_iter().collect()
     };
+    let tf_table = build_tf_table(tf);
     let mut pq = BinaryHeap::with_capacity(50000);
     let mut v: HashMap<usize, Vec<(i32, i32, i32)>> = HashMap::with_capacity(5000);
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
-                if !tn_ok(&r.tn, tf) { continue; }
+                if !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     pq.push(St {
                         tdur: r.dur,
@@ -581,7 +588,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
                 if is_stopped() {
                     break;
                 }
-                if !tn_ok(&next_r.tn, tf) { continue; }
+                if !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -640,12 +647,13 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
     } else {
         [did].into_iter().collect()
     };
+    let tf_table = build_tf_table(tf);
     let mut q = VecDeque::with_capacity(50000);
     let mut visited: HashMap<(usize, u32), i32> = HashMap::with_capacity(10000);
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
-                if !tn_ok(&r.tn, tf) { continue; }
+                if !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     q.push_back(StMx {
                         tdur: r.dur,
@@ -703,7 +711,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
                 if is_stopped() {
                     break;
                 }
-                if !tn_ok(&next_r.tn, tf) { continue; }
+                if !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -767,12 +775,13 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
     } else {
         [did].into_iter().collect()
     };
+    let tf_table = build_tf_table(tf);
     let mut pq = BinaryHeap::with_capacity(4000000);
     let mut v: HashMap<usize, i32> = HashMap::with_capacity(5000);
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
-                if !tn_ok(&r.tn, tf) { continue; }
+                if !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 pq.push(StK {
                     tkm: r.km,
                     sid: r.al,
@@ -817,7 +826,7 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
                 if is_stopped() {
                     break;
                 }
-                if !tn_ok(&next_r.tn, tf) { continue; }
+                if !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
                 let new_tkm = c.tkm + next_r.km;
                 pq.push(StK {
                     tkm: new_tkm,

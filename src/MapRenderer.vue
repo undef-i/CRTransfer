@@ -110,17 +110,17 @@ const getThemeColors = () => {
   const isDarkMode = isDark.value;
   if (isChinaUser.value) {
     return {
-      polylineColor: isDarkMode ? "#00c6ff" : "#0078d4",
-      markerColor: isDarkMode ? "#00c6ff" : "#0078d4",
-      markerFillColor: isDarkMode ? "#00c6ff" : "#0078d4",
+      polylineColor: "#000000",
+      markerColor: "#000000",
+      markerFillColor: "#000000",
       containerBg: isDarkMode ? "#1a1a1a" : "#ffffff",
       tileLayer:
         "https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
     };
   } else {
     return {
-      polylineColor: isDarkMode ? "#24292f" : "#0969da",
-      markerColor: isDarkMode ? "#ffffff" : "#000000",
+      polylineColor: "#000000",
+      markerColor: "#000000",
       markerFillColor: isDarkMode ? "#000000" : "#ffffff",
       containerBg: isDarkMode ? "#0d1117" : "#f6f8fa",
       tileLayer: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
