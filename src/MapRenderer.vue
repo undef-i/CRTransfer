@@ -157,7 +157,7 @@ const initializeMap = (element) => {
           "http://wprd03.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
           "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
         ],
-        tileSize: 256,
+        tileSize: 128,
         attribution: "© 高德地图",
       }
     : {
