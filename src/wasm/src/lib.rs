@@ -512,6 +512,35 @@ async fn sleep(ms: i32) -> Result<(), JsValue> {
     Ok(())
 }
 
+struct PStore {
+    b: Vec<Vec<(i32, i32)>>,
+}
+impl PStore {
+    fn new() -> Self {
+        Self { b: Vec::new() }
+    }
+    fn add(&mut self, a: i32, d: i32, x: i32) -> bool {
+        let xi = x as usize;
+        if xi >= self.b.len() {
+            self.b.resize(xi + 1, Vec::new());
+        }
+        for i in 0..=xi {
+            if i < self.b.len() {
+                for &(pa, pd) in &self.b[i] {
+                    if pa <= a && pd >= d {
+                        return false;
+                    }
+                }
+            }
+        }
+        for i in xi..self.b.len() {
+            self.b[i].retain(|&(pa, pd)| !(pa >= a && pd <= d));
+        }
+        self.b[xi].push((a, d));
+        true
+    }
+}
+
 #[wasm_bindgen]
 pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
@@ -528,7 +557,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
     };
     let tf_table = build_tf_table(tf);
     let mut pq = BinaryHeap::with_capacity(50000);
-    let mut v: HashMap<usize, Vec<(i32, i32, i32)>> = HashMap::with_capacity(5000);
+    let mut v: HashMap<usize, PStore> = HashMap::with_capacity(5000);
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
@@ -571,18 +600,10 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
             }
             continue;
         }
-        let (arr, dep, x) = (c.aat, c.idt, c.x);
-        if let Some(prof) = v.get(&c.sid) {
-            if prof
-                .iter()
-                .any(|&(a, d, x_prof)| a <= arr && d >= dep && x_prof <= x)
-            {
-                continue;
-            }
+        let s = v.entry(c.sid).or_insert_with(PStore::new);
+        if !s.add(c.aat, c.idt, c.x) {
+            continue;
         }
-        let prof = v.entry(c.sid).or_default();
-        prof.retain(|&(a, d, x_prof)| !(arr <= a && dep >= d && x <= x_prof));
-        prof.push((arr, dep, x));
         if let Some(next_rs) = rfs.get(&c.sid) {
             for next_r in next_rs {
                 if is_stopped() {
