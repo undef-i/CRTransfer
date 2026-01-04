@@ -235,40 +235,20 @@ export function qry_rdat() {
 }
 
 /**
- * @param {string} o
- * @param {string} d
- * @param {number} mtt
- * @param {boolean} esc_o
- * @param {boolean} esc_d
- * @returns {Promise<void>}
+ * @returns {string}
  */
-export function find_mx(o, d, mtt, esc_o, esc_d) {
-    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find_mx(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
-    return ret;
+export function qry_scdat() {
+    const ret = wasm.qry_scdat();
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
+    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
+    return v1;
 }
 
 export function stop() {
     wasm.stop();
-}
-
-/**
- * @param {string} tn
- * @param {number} dtr
- * @param {number} atr
- * @returns {any}
- */
-export function gts(tn, dtr, atr) {
-    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.gts(ptr0, len0, dtr, atr);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
 }
 
 function getArrayJsValueFromWasm0(ptr, len) {
@@ -295,32 +275,19 @@ export function g_stns() {
 }
 
 /**
- * @param {string} o
- * @param {string} d
- * @param {boolean} esc_o
- * @param {boolean} esc_d
- * @returns {Promise<void>}
+ * @param {string} tn
+ * @param {number} dtr
+ * @param {number} atr
+ * @returns {any}
  */
-export function find_k(o, d, esc_o, esc_d) {
-    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function gts(tn, dtr, atr) {
+    const ptr0 = passStringToWasm0(tn, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d);
-    return ret;
-}
-
-/**
- * @returns {string}
- */
-export function qry_scdat() {
-    const ret = wasm.qry_scdat();
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
+    const ret = wasm.gts(ptr0, len0, dtr, atr);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
-    var v1 = getCachedStringFromWasm0(ret[0], ret[1]);
-    if (ret[0] !== 0) { wasm.__wbindgen_free(ret[0], ret[1], 1); }
-    return v1;
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -329,14 +296,56 @@ export function qry_scdat() {
  * @param {number} mtt
  * @param {boolean} esc_o
  * @param {boolean} esc_d
+ * @param {string} tf
  * @returns {Promise<void>}
  */
-export function find(o, d, mtt, esc_o, esc_d) {
+export function find(o, d, mtt, esc_o, esc_d, tf) {
     const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.find(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d);
+    const ptr2 = passStringToWasm0(tf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.find(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d, ptr2, len2);
+    return ret;
+}
+
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {number} mtt
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @param {string} tf
+ * @returns {Promise<void>}
+ */
+export function find_mx(o, d, mtt, esc_o, esc_d, tf) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(tf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.find_mx(ptr0, len0, ptr1, len1, mtt, esc_o, esc_d, ptr2, len2);
+    return ret;
+}
+
+/**
+ * @param {string} o
+ * @param {string} d
+ * @param {boolean} esc_o
+ * @param {boolean} esc_d
+ * @param {string} tf
+ * @returns {Promise<void>}
+ */
+export function find_k(o, d, esc_o, esc_d, tf) {
+    const ptr0 = passStringToWasm0(o, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(d, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(tf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.find_k(ptr0, len0, ptr1, len1, esc_o, esc_d, ptr2, len2);
     return ret;
 }
 
@@ -344,8 +353,8 @@ function __wbg_adapter_20(arg0, arg1, arg2) {
     wasm.closure41_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_46(arg0, arg1, arg2, arg3) {
-    wasm.closure25_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_38(arg0, arg1, arg2, arg3) {
+    wasm.closure31_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 async function __wbg_load(module, imports) {
@@ -417,7 +426,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return __wbg_adapter_46(a, state0.b, arg0, arg1);
+                    return __wbg_adapter_38(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -489,7 +498,7 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper842 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper848 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 42, __wbg_adapter_20);
         return ret;
     };
