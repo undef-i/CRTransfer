@@ -1629,6 +1629,7 @@ const handlePrimaryButtonClick = async () => {
       bufferUpdateInterval = null;
     }
     journeyResultBuffer = [];
+    return;
   }
   if (journeys.value.length > 0) {
     journeys.value = [];
