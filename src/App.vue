@@ -1098,31 +1098,21 @@ const isChinaUser = ref(false);
 async function checkChinaUser() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
     try {
-      const response = await fetch("https://ipapi.co/json/", {
-        method: "GET",
-        mode: "cors",
-        credentials: "omit",
+      await fetch("https://www.google.com/generate_204", {
+        mode: "no-cors",
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const country = data.country || data.country_code || "";
-        const isChina =
-          country.toLowerCase() === "cn" || country.toLowerCase() === "china";
-        return isChina;
-      }
+      return false;
     } catch (e) {
       clearTimeout(timeoutId);
+      return true;
     }
-
-    return false;
   } catch (error) {
-    return false;
+    return true;
   }
 }
 
