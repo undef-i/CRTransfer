@@ -1208,7 +1208,7 @@ const progressPercent = computed(() =>
 );
 const statusType = computed(() => {
   const msg = statusMessage.value;
-  if (msg.includes("错误")) return "error";
+  if (msg.includes("错误") || msg.includes("无方案")) return "error";
   if (msg.includes("共") || msg.includes("查询到")) return "success";
   if (running.value || msg.includes("加载")) return "info";
   if (msg.includes("就绪") || msg.includes("查询条件更改")) return "info";
