@@ -304,7 +304,7 @@
                             <n-text style="font-size: 13px; line-height: 1.3">
                               • <n-text code>p</n-text>:
                               <n-text code>Integer</n-text> - 开行位掩码
-                              (其二进制从右至左的每一位对应周期内一天的开行状态)。
+                              (其二进制从低位至高位的每一位对应周期内一天的开行状态)。
                             </n-text>
                             <n-text style="font-size: 13px; line-height: 1.3">
                               • <n-text code>s</n-text>:
@@ -1844,7 +1844,7 @@ const getAllTemplates = () => {
 const loadCustomTemplate = (key) => {
   const templates = getAllTemplates();
   const template = templates[key];
-  if (template && template.code) {
+  if (template && typeof template.code === "string") {
     customCode.value = template.code;
   }
 };
@@ -1858,9 +1858,18 @@ const selectTemplate = (key) => {
 };
 
 const addQuickTemplate = () => {
-  const defaultName = "Script " + new Date().toLocaleTimeString();
-  addUserTemplate(defaultName, "");
+  const userTemplates = loadUserTemplates();
+  const existingNames = new Set(Object.values(userTemplates).map((t) => t.name));
+  
+  let i = 0;
+  while (existingNames.has(`新模板 ${i}`)) {
+    i++;
+  }
+  const defaultName = `新模板 ${i}`;
+  
+  const key = addUserTemplate(defaultName, "");
   refreshTemplates();
+  selectTemplate(key);
 };
 
 const startEditTemplate = (key, name) => {
