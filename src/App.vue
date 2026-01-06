@@ -558,7 +558,7 @@
                       v-model:value="mtt"
                       :min="0"
                       :show-button="false"
-                      placeholder="任意"
+                      placeholder="0"
                       style="text-align: center; min-width: 80px"
                     />
                     <n-input-group-label>分钟</n-input-group-label>

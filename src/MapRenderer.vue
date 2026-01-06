@@ -192,28 +192,30 @@ const initializeMap = (element) => {
   mapInstance.on("load", () => {
     const coordinates = validStops.map((s) => [s.lon, s.lat]);
 
-    mapInstance.addSource("railway-route", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: coordinates,
+    if (coordinates.length >= 2) {
+      mapInstance.addSource("railway-route", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: coordinates,
+          },
         },
-      },
-    });
+      });
 
-    mapInstance.addLayer({
-      id: "railway-line",
-      type: "line",
-      source: "railway-route",
-      paint: {
-        "line-color": colors.polylineColor,
-        "line-width": 4,
-        "line-opacity": 0.8,
-      },
-    });
+      mapInstance.addLayer({
+        id: "railway-line",
+        type: "line",
+        source: "railway-route",
+        paint: {
+          "line-color": colors.polylineColor,
+          "line-width": 4,
+          "line-opacity": 0.8,
+        },
+      });
+    }
 
     mapInstance.addSource("stations", {
       type: "geojson",
@@ -283,7 +285,7 @@ const initializeMap = (element) => {
 
     const bounds = new maplibregl.LngLatBounds();
     coordinates.forEach((coord) => bounds.extend(coord));
-    mapInstance.fitBounds(bounds, { padding: 20 });
+    mapInstance.fitBounds(bounds, { padding: 20, animate: false });
 
     loading.value = false;
   });
