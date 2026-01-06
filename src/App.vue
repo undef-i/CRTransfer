@@ -1,42 +1,23 @@
 <template>
-  <n-config-provider
-    :theme="currentTheme"
-    :theme-overrides="currentThemeOverrides"
-    style="height: 100%"
-  >
+  <n-config-provider :theme="currentTheme" :theme-overrides="currentThemeOverrides" style="height: 100%">
     <n-layout style="min-height: 100vh">
       <n-layout-header bordered style="padding: 12px 0">
         <div style="max-width: 600px; margin: 0 auto; padding: 0 24px">
           <div class="header-desktop">
             <n-space justify="space-between" align="center">
               <n-space align="center" :size="12">
-                <n-h1 style="margin: 0; font-size: 20px; font-weight: 600"
-                  >铁路换乘查询</n-h1
-                >
+                <n-h1 style="margin: 0; font-size: 20px; font-weight: 600">铁路换乘查询</n-h1>
                 <n-text depth="3" style="font-size: 10px">
-                  <a
-                    href="/vanilla/"
-                    target="_blank"
-                    style="color: #2ea043; text-decoration: none"
-                    >旧版</a
-                  >
+                  <a href="/vanilla/" target="_blank" style="color: #2ea043; text-decoration: none">旧版</a>
                 </n-text>
               </n-space>
               <n-space align="center" :size="16">
                 <n-text depth="3" style="font-size: 12px">
                   © 2025 noxylva.
-                  <a
-                    href="https://github.com/undef-i/CRTransfer"
-                    target="_blank"
-                    style="color: #2ea043; text-decoration: none"
-                    >GitHub</a
-                  >
+                  <a href="https://github.com/undef-i/CRTransfer" target="_blank"
+                    style="color: #2ea043; text-decoration: none">GitHub</a>
                 </n-text>
-                <n-button
-                  size="small"
-                  @click="toggleTheme"
-                  :title="isDark ? '切换到亮色主题' : '切换到暗色主题'"
-                >
+                <n-button size="small" @click="toggleTheme" :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
                   <template #icon>
                     <n-icon>
                       <component :is="isDark ? SunnyOutline : MoonOutline" />
@@ -48,50 +29,33 @@
           </div>
 
           <div class="header-mobile">
-            <div
-              style="
+            <div style="
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 margin-bottom: 8px;
-              "
-            >
+              ">
               <n-space align="center" :size="8">
-                <n-icon size="24" color="#18a058"><TrainOutline /></n-icon>
-                <n-h1 style="margin: 0; font-size: 18px; font-weight: 600"
-                  >铁路换乘查询</n-h1
-                >
+                <n-icon size="24" color="#18a058">
+                  <TrainOutline />
+                </n-icon>
+                <n-h1 style="margin: 0; font-size: 18px; font-weight: 600">铁路换乘查询</n-h1>
               </n-space>
               <n-text depth="3" style="font-size: 10px">
-                <a
-                  href="/vanilla/"
-                  target="_blank"
-                  style="color: #2ea043; text-decoration: none"
-                  >旧版</a
-                >
+                <a href="/vanilla/" target="_blank" style="color: #2ea043; text-decoration: none">旧版</a>
               </n-text>
             </div>
-            <div
-              style="
+            <div style="
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-              "
-            >
+              ">
               <n-text depth="3" style="font-size: 12px">
                 © 2025 noxylva.
-                <a
-                  href="https://github.com/undef-i/CRTransfer"
-                  target="_blank"
-                  style="color: #2ea043; text-decoration: none"
-                  >GitHub</a
-                >
+                <a href="https://github.com/undef-i/CRTransfer" target="_blank"
+                  style="color: #2ea043; text-decoration: none">GitHub</a>
               </n-text>
-              <n-button
-                size="small"
-                @click="toggleTheme"
-                :title="isDark ? '切换到亮色主题' : '切换到暗色主题'"
-              >
+              <n-button size="small" @click="toggleTheme" :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
                 <template #icon>
                   <n-icon>
                     <component :is="isDark ? SunnyOutline : MoonOutline" />
@@ -103,14 +67,12 @@
         </div>
       </n-layout-header>
 
-      <n-layout-content
-        style="
+      <n-layout-content style="
           padding: 24px 10px;
           max-width: 600px;
           margin: 0 auto;
           width: 100%;
-        "
-      >
+        ">
         <n-space vertical :size="24">
           <n-alert type="warning" :show-icon="true">
             站点位置信息来源网络，仅供辅助参考。数据有效期至
@@ -120,156 +82,85 @@
           <n-card title="" hoverable style="box-shadow: none">
             <n-space vertical :size="20">
               <n-button-group class="full-width-responsive-group">
-                <n-button
-                  :type="mode === 'time' ? 'primary' : 'default'"
-                  :ghost="mode !== 'time'"
-                  @click="mode = 'time'"
-                >
+                <n-button :type="mode === 'time' ? 'primary' : 'default'" :ghost="mode !== 'time'"
+                  @click="mode = 'time'">
                   <span class="long-text">最短在途时间</span>
                   <span class="short-text">时间</span>
                 </n-button>
-                <n-button
-                  :type="mode === 'xfer' ? 'primary' : 'default'"
-                  :ghost="mode !== 'xfer'"
-                  @click="mode = 'xfer'"
-                >
+                <n-button :type="mode === 'xfer' ? 'primary' : 'default'" :ghost="mode !== 'xfer'"
+                  @click="mode = 'xfer'">
                   <span class="long-text">最少换乘次数</span>
                   <span class="short-text">换乘</span>
                 </n-button>
-                <n-button
-                  :type="mode === 'km' ? 'primary' : 'default'"
-                  :ghost="mode !== 'km'"
-                  @click="mode = 'km'"
-                >
+                <n-button :type="mode === 'km' ? 'primary' : 'default'" :ghost="mode !== 'km'" @click="mode = 'km'">
                   <span class="long-text">最短途径里程</span>
                   <span class="short-text">里程</span>
                 </n-button>
-                <n-button
-                  :type="mode === 'custom' ? 'primary' : 'default'"
-                  :ghost="mode !== 'custom'"
-                  @click="mode = 'custom'"
-                >
+                <n-button :type="mode === 'custom' ? 'primary' : 'default'" :ghost="mode !== 'custom'"
+                  @click="mode = 'custom'">
                   <span class="long-text">自定义查询</span>
                   <span class="short-text">自定义</span>
                 </n-button>
               </n-button-group>
 
               <n-collapse-transition :show="mode !== 'custom'">
-                <n-button-group class="full-width-responsive-group" style="margin-bottom: 12px;">
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('G') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('G')"
-                    @click="toggleTrainFilter('G')"
-                  >
+                <n-button-group class="full-width-responsive-group" style="margin-bottom: 12px">
+                  <n-button size="small" :type="trainFilter.includes('G') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('G')" @click="toggleTrainFilter('G')">
                     G
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('D') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('D')"
-                    @click="toggleTrainFilter('D')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('D') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('D')" @click="toggleTrainFilter('D')">
                     D
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('C') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('C')"
-                    @click="toggleTrainFilter('C')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('C') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('C')" @click="toggleTrainFilter('C')">
                     C
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('K') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('K')"
-                    @click="toggleTrainFilter('K')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('K') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('K')" @click="toggleTrainFilter('K')">
                     K
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('T') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('T')"
-                    @click="toggleTrainFilter('T')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('T') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('T')" @click="toggleTrainFilter('T')">
                     T
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('Z') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('Z')"
-                    @click="toggleTrainFilter('Z')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('Z') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('Z')" @click="toggleTrainFilter('Z')">
                     Z
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('Y') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('Y')"
-                    @click="toggleTrainFilter('Y')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('Y') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('Y')" @click="toggleTrainFilter('Y')">
                     Y
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('S') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('S')"
-                    @click="toggleTrainFilter('S')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('S') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('S')" @click="toggleTrainFilter('S')">
                     S
                   </n-button>
-                  <n-button
-                    size="small"
-                    :type="trainFilter.includes('NUM') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('NUM')"
-                    @click="toggleTrainFilter('NUM')"
-                  >
+                  <n-button size="small" :type="trainFilter.includes('NUM') ? 'primary' : 'default'"
+                    :ghost="!trainFilter.includes('NUM')" @click="toggleTrainFilter('NUM')">
                     普
                   </n-button>
                 </n-button-group>
 
                 <div class="trip-planner-container">
                   <div class="input-group">
-                    <n-auto-complete
-                      v-model:value="origin"
-                      :options="originOptions"
-                      placeholder="起点"
-                      clearable
-                    />
-                    <n-button
-                      :type="escOrigin ? 'primary' : 'default'"
-                      :ghost="!escOrigin"
-                      @click="escOrigin = !escOrigin"
-                    >
+                    <n-auto-complete v-model:value="origin" :options="originOptions" placeholder="起点" clearable />
+                    <n-button :type="escOrigin ? 'primary' : 'default'" :ghost="!escOrigin"
+                      @click="escOrigin = !escOrigin">
                       同城站
                     </n-button>
                   </div>
 
-                  <n-button
-                    text
-                    circle
-                    class="swap-button"
-                    @click="swapOriginDestination"
-                  >
-                    <template #icon
-                      ><n-icon :component="SwapHorizontalOutline"
-                    /></template>
+                  <n-button text circle class="swap-button" @click="swapOriginDestination">
+                    <template #icon><n-icon :component="SwapHorizontalOutline" /></template>
                   </n-button>
 
                   <div class="input-group">
-                    <n-auto-complete
-                      v-model:value="destination"
-                      :options="destinationOptions"
-                      placeholder="终点"
-                      clearable
-                    />
-                    <n-button
-                      :type="escDestination ? 'primary' : 'default'"
-                      :ghost="!escDestination"
-                      @click="escDestination = !escDestination"
-                    >
+                    <n-auto-complete v-model:value="destination" :options="destinationOptions" placeholder="终点"
+                      clearable />
+                    <n-button :type="escDestination ? 'primary' : 'default'" :ghost="!escDestination"
+                      @click="escDestination = !escDestination">
                       同城站
                     </n-button>
                   </div>
@@ -281,13 +172,9 @@
                   <n-collapse arrow-placement="right">
                     <n-collapse-item title="数据结构">
                       <n-space vertical :size="8">
-                        <n-text strong style="font-size: 14px"
-                          >接口 <n-text code>qry('rdat')</n-text></n-text
-                        >
-                        <n-text style="font-size: 13px; line-height: 1.3"
-                          >返回: <n-text code>Array&lt;Train&gt;</n-text> -
-                          列车对象的数组。</n-text
-                        >
+                        <n-text strong style="font-size: 14px">接口 <n-text code>qry('rdat')</n-text></n-text>
+                        <n-text style="font-size: 13px; line-height: 1.3">返回: <n-text code>Array&lt;Train&gt;</n-text> -
+                          列车对象的数组。</n-text>
                         <n-space vertical :size="2" style="margin-left: 12px">
                           <n-text style="font-size: 13px; line-height: 1.3">
                             <n-text code>Train</n-text> 对象:
@@ -311,42 +198,26 @@
                               <n-text code>Array&lt;Station&gt;</n-text> -
                               经停站对象数组。
                             </n-text>
-                            <n-space
-                              vertical
-                              :size="1"
-                              style="margin-left: 36px"
-                            >
+                            <n-space vertical :size="1" style="margin-left: 36px">
                               <n-text style="font-size: 13px; line-height: 1.3">
                                 <n-text code>Station</n-text> 对象:
                               </n-text>
-                              <n-space
-                                vertical
-                                :size="1"
-                                style="margin-left: 48px"
-                              >
-                                <n-text
-                                  style="font-size: 13px; line-height: 1.3"
-                                >
+                              <n-space vertical :size="1" style="margin-left: 48px">
+                                <n-text style="font-size: 13px; line-height: 1.3">
                                   - <n-text code>id</n-text>:
                                   <n-text code>Integer</n-text> - 车站 ID。
                                 </n-text>
-                                <n-text
-                                  style="font-size: 13px; line-height: 1.3"
-                                >
+                                <n-text style="font-size: 13px; line-height: 1.3">
                                   - <n-text code>n</n-text>:
                                   <n-text code>String</n-text> - 站名。
                                 </n-text>
-                                <n-text
-                                  style="font-size: 13px; line-height: 1.3"
-                                >
+                                <n-text style="font-size: 13px; line-height: 1.3">
                                   - <n-text code>a</n-text> /
                                   <n-text code>d</n-text>:
                                   <n-text code>Integer</n-text> - 到达/出发时间
                                   (从始发日00:00起计的总分钟数)。
                                 </n-text>
-                                <n-text
-                                  style="font-size: 13px; line-height: 1.3"
-                                >
+                                <n-text style="font-size: 13px; line-height: 1.3">
                                   - <n-text code>km</n-text>:
                                   <n-text code>Integer</n-text> - 累计里程
                                   (公里)。
@@ -358,14 +229,10 @@
 
                         <n-divider style="margin: 8px 0" />
 
-                        <n-text strong style="font-size: 14px"
-                          >接口 <n-text code>qry('scdat')</n-text></n-text
-                        >
-                        <n-text style="font-size: 13px; line-height: 1.3"
-                          >返回:
+                        <n-text strong style="font-size: 14px">接口 <n-text code>qry('scdat')</n-text></n-text>
+                        <n-text style="font-size: 13px; line-height: 1.3">返回:
                           <n-text code>{ g: Array&lt;Group&gt; }</n-text> -
-                          包含分组列表的对象。</n-text
-                        >
+                          包含分组列表的对象。</n-text>
                         <n-space vertical :size="2" style="margin-left: 12px">
                           <n-text style="font-size: 13px; line-height: 1.3">
                             <n-text code>Group</n-text> 对象:
@@ -376,22 +243,12 @@
                               <n-text code>Array&lt;StationSimple&gt;</n-text> -
                               同组车站对象数组。
                             </n-text>
-                            <n-space
-                              vertical
-                              :size="1"
-                              style="margin-left: 36px"
-                            >
+                            <n-space vertical :size="1" style="margin-left: 36px">
                               <n-text style="font-size: 13px; line-height: 1.3">
                                 <n-text code>StationSimple</n-text> 对象:
                               </n-text>
-                              <n-space
-                                vertical
-                                :size="1"
-                                style="margin-left: 48px"
-                              >
-                                <n-text
-                                  style="font-size: 13px; line-height: 1.3"
-                                >
+                              <n-space vertical :size="1" style="margin-left: 48px">
+                                <n-text style="font-size: 13px; line-height: 1.3">
                                   - <n-text code>n</n-text>:
                                   <n-text code>String</n-text> - 站名。
                                 </n-text>
@@ -404,53 +261,36 @@
                   </n-collapse>
 
                   <n-space vertical :size="12">
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                      <n-button
-                        v-for="(template, key) in allTemplates"
-                        :key="key"
-                        size="small"
-                        @click="selectTemplate(key)"
-                        :disabled="!ready"
-                        :type="
-                          selectedTemplate === key
-                            ? 'primary'
-                            : template.type === 'user'
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                      <n-button v-for="(template, key) in allTemplates" :key="key" size="small"
+                        @click="selectTemplate(key)" :disabled="!ready" :type="selectedTemplate === key
+                          ? 'primary'
+                          : template.type === 'user'
                             ? 'default'
                             : 'default'
-                        "
-                        style="position: relative; transition: all 0.2s; flex: 1; min-width: fit-content;"
-                        @mouseenter="hoveringTemplate = key"
-                        @mouseleave="hoveringTemplate = null"
-                      >
-                        <div
-                          style="
+                          " style="
+                          position: relative;
+                          transition: all 0.2s;
+                          flex: 1;
+                          min-width: fit-content;
+                        " @mouseenter="hoveringTemplate = key" @mouseleave="hoveringTemplate = null">
+                        <div style="
                             display: inline-flex;
                             align-items: center;
                             gap: 4px;
                             position: relative;
-                          "
-                        >
-                          <span
-                            v-if="editingTemplate !== key"
-                            @dblclick.stop="
-                              startEditTemplate(key, template.name)
-                            "
-                            style="
+                          ">
+                          <span v-if="editingTemplate !== key" @dblclick.stop="
+                            startEditTemplate(key, template.name)
+                            " style="
                               cursor: pointer;
                               box-sizing: border-box;
                               line-height: 1;
                               display: inline-block;
                               vertical-align: baseline;
-                            "
-                            >{{ template.name }}</span
-                          >
-                          <span
-                            v-else
-                            contenteditable="true"
-                            @blur="saveTemplateEdit(key)"
-                            @keydown.enter.prevent="saveTemplateEdit(key)"
-                            @click.stop=""
-                            style="
+                            ">{{ template.name }}</span>
+                          <span v-else contenteditable="true" @blur="saveTemplateEdit(key)"
+                            @keydown.enter.prevent="saveTemplateEdit(key)" @click.stop="" style="
                               background: transparent;
                               outline: none;
                               color: inherit;
@@ -462,22 +302,12 @@
                               vertical-align: baseline;
                               line-height: 1;
                               box-sizing: border-box;
-                            "
-                            ref="editableSpan"
-                            >{{ editingName }}</span
-                          >
-                          <n-button
-                            v-if="template.type === 'user'"
-                            size="tiny"
-                            @click.stop="
-                              editingTemplate === key
-                                ? saveTemplateEdit(key)
-                                : startEditTemplate(key, template.name)
-                            "
-                            :disabled="!ready"
-                            quaternary
-                            circle
-                            style="
+                            " ref="editableSpan">{{ editingName }}</span>
+                          <n-button v-if="template.type === 'user'" size="tiny" @click.stop="
+                            editingTemplate === key
+                              ? saveTemplateEdit(key)
+                              : startEditTemplate(key, template.name)
+                            " :disabled="!ready" quaternary circle style="
                               padding: 0;
                               width: 16px;
                               height: 16px;
@@ -486,100 +316,64 @@
                               margin-left: 2px;
                               border: none !important;
                               box-shadow: none !important;
-                            "
-                          >
-                            <n-icon
-                              :style="{
-                                fontSize: '12px',
-                                color:
-                                  selectedTemplate === key
-                                    ? isDark
-                                      ? '#000'
-                                      : '#fff'
-                                    : isDark
+                            ">
+                            <n-icon :style="{
+                              fontSize: '12px',
+                              color:
+                                selectedTemplate === key
+                                  ? isDark
+                                    ? '#000'
+                                    : '#fff'
+                                  : isDark
                                     ? '#fff'
                                     : '#666',
-                              }"
-                            >
-                              <component
-                                :is="
-                                  editingTemplate === key
-                                    ? CheckmarkOutline
-                                    : CreateOutline
-                                "
-                                :style="{
+                            }">
+                              <component :is="editingTemplate === key
+                                ? CheckmarkOutline
+                                : CreateOutline
+                                " :style="{
                                   color:
                                     selectedTemplate === key
                                       ? isDark
                                         ? '#000'
                                         : '#fff'
                                       : isDark
-                                      ? '#fff'
-                                      : '#666',
-                                }"
-                              />
+                                        ? '#fff'
+                                        : '#666',
+                                }" />
                             </n-icon>
                           </n-button>
                         </div>
                       </n-button>
-                      <n-button
-                        size="small"
-                        @click="addQuickTemplate"
-                        :disabled="!ready"
-                        type="default"
-                        circle
-                      >
-                        <n-icon><AddOutline /></n-icon>
+                      <n-button size="small" @click="addQuickTemplate" :disabled="!ready" type="default" circle>
+                        <n-icon>
+                          <AddOutline />
+                        </n-icon>
                       </n-button>
                     </div>
                   </n-space>
 
                   <n-space vertical :size="12">
-                    <n-input
-                      v-model:value="customCode"
-                      type="textarea"
-                      placeholder=""
-                      :rows="10"
-                      :input-props="{ spellcheck: false }"
-                      font-family="Consolas, Monaco, monospace"
-                    />
+                    <n-input v-model:value="customCode" type="textarea" placeholder="" :rows="10"
+                      :input-props="{ spellcheck: false }" font-family="Consolas, Monaco, monospace" />
                   </n-space>
                 </n-space>
               </n-collapse-transition>
 
-
               <div class="search-actions-container">
-                <n-collapse-transition
-                  :show="mode !== 'km' && mode !== 'custom'"
-                >
+                <n-collapse-transition :show="mode !== 'km' && mode !== 'custom'">
                   <n-input-group>
                     <n-input-group-label>最短换乘时间</n-input-group-label>
-                    <n-input-number
-                      v-model:value="mtt"
-                      :min="0"
-                      :show-button="false"
-                      placeholder="0"
-                      style="text-align: center; min-width: 80px"
-                    />
+                    <n-input-number v-model:value="mtt" :min="0" :show-button="false" placeholder="0"
+                      style="text-align: center; min-width: 80px" />
                     <n-input-group-label>分钟</n-input-group-label>
                   </n-input-group>
                 </n-collapse-transition>
 
-                <n-space
-                  justify="end"
-                  align="center"
-                  class="search-button-wrapper"
-                >
-                  <n-button
-                    :type="running ? 'error' : 'primary'"
-                    :ghost="running"
-                    :loading="!ready"
-                    :disabled="!ready && !running"
-                    @click="handlePrimaryButtonClick"
-                  >
-                    <template #icon
-                      ><n-icon :component="primaryButtonIcon"
-                    /></template>
+                <n-space justify="end" align="center" class="search-button-wrapper">
+                  <n-button :type="running ? 'error' : 'primary'" :ghost="running" :loading="!ready"
+                    :disabled="!ready && !running" @click="handlePrimaryButtonClick">
+                    <template #icon><n-icon :component="primaryButtonIcon" /></template>
                     {{ running ? "停止" : "查询" }}
                   </n-button>
                 </n-space>
@@ -587,33 +381,20 @@
             </n-space>
           </n-card>
 
-          <n-alert
-            v-if="statusMessage && mode === 'custom'"
-            :type="statusType"
-            :show-icon="true"
-            >{{ statusMessage }}</n-alert
-          >
+          <n-alert v-if="statusMessage && mode === 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
+          }}</n-alert>
 
-          <n-collapse-transition
-            :show="mode === 'custom' && customResult !== null"
-          >
+          <n-collapse-transition :show="mode === 'custom' && customResult !== null">
             <n-card style="margin-top: 16px">
               <template #header>
-                <n-space
-                  justify="space-between"
-                  align="center"
-                  style="width: 100%"
-                >
+                <n-space justify="space-between" align="center" style="width: 100%">
                   <n-text>查询结果</n-text>
                   <n-space :size="8">
-                    <n-button
-                      size="tiny"
-                      @click="copyCustomResult"
-                      quaternary
-                      type="primary"
-                    >
+                    <n-button size="tiny" @click="copyCustomResult" quaternary type="primary">
                       <template #icon>
-                        <n-icon><CopyOutline /></n-icon>
+                        <n-icon>
+                          <CopyOutline />
+                        </n-icon>
                       </template>
                     </n-button>
                   </n-space>
@@ -621,75 +402,37 @@
               </template>
 
               <div v-if="isChartResult(customResult)" class="chart-container">
-                <canvas
-                  ref="chartCanvas"
-                  style="width: 100%; height: 100%"
-                ></canvas>
+                <canvas ref="chartCanvas" style="width: 100%; height: 100%"></canvas>
               </div>
 
-              <n-code
-                v-else
-                :code="JSON.stringify(customResult, null, 2)"
-                language="json"
-                word-wrap
-                style="max-height: 400px; overflow-y: auto"
-              />
+              <n-code v-else :code="JSON.stringify(customResult, null, 2)" language="json" word-wrap
+                style="max-height: 400px; overflow-y: auto" />
             </n-card>
           </n-collapse-transition>
 
-          <n-alert
-            v-if="statusMessage && mode !== 'custom'"
-            :type="statusType"
-            :show-icon="true"
-            >{{ statusMessage }}</n-alert
-          >
-          <n-progress
-            v-if="progressVisible"
-            type="line"
-            :percentage="progressPercent"
-            :show-indicator="false"
-            processing
-          />
+          <n-alert v-if="statusMessage && mode !== 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
+          }}</n-alert>
+          <n-progress v-if="progressVisible" type="line" :percentage="progressPercent" :show-indicator="false"
+            processing />
           <n-space v-if="journeys.length > 0" vertical :size="16">
-            <n-card
-              v-for="(journey, index) in displayedJourneys"
-              :key="journey.id"
-              hoverable
-              style="box-shadow: none"
-              :title="`方案 ${index + 1}`"
-            >
-              <n-space :size="12" style="margin-bottom: 20px"
-                ><n-tag
-                  :type="journey.searchMode === 'km' ? 'info' : 'success'"
-                  round
-                  ><template #icon
-                    ><n-icon
-                      :component="
-                        journey.searchMode === 'km' ? Location : TimeOutline
-                      " /></template
-                  >{{
-                    journey.searchMode === "km"
-                      ? `${journey.tkm} 公里`
-                      : formatDuration(journey.tdur)
-                  }}</n-tag
-                ><n-tag type="warning" round
-                  ><template #icon
-                    ><n-icon :component="SwapHorizontalOutline" /></template
-                  >{{ calculateTransfers(journey) }} 次换乘</n-tag
-                >
+            <n-card v-for="(journey, index) in displayedJourneys" :key="journey.id" hoverable style="box-shadow: none"
+              :title="`方案 ${index + 1}`">
+              <n-space :size="12" style="margin-bottom: 20px"><n-tag
+                  :type="journey.searchMode === 'km' ? 'info' : 'success'" round><template #icon><n-icon :component="journey.searchMode === 'km' ? Location : TimeOutline
+                    " /></template>{{
+                      journey.searchMode === "km"
+                        ? `${journey.tkm} 公里`
+                        : formatDuration(journey.tdur)
+                    }}</n-tag><n-tag type="warning" round><template #icon><n-icon
+                      :component="SwapHorizontalOutline" /></template>{{ calculateTransfers(journey) }} 次换乘</n-tag>
               </n-space>
               <n-timeline>
-                <n-timeline-item
-                  v-for="(segment, segIndex) in journey.segments"
-                  :key="segIndex"
-                  :type="segment.type"
-                  :color="segment.color"
-                >
+                <n-timeline-item v-for="(segment, segIndex) in journey.segments" :key="segIndex" :type="segment.type"
+                  :color="segment.color">
                   <div v-if="segment.train === '换乘'">
                     <n-space align="center">
                       <n-text strong style="font-size: 16px">换乘</n-text>
-                      <n-text depth="3">等待:</n-text>
-                      <n-text type="warning">{{
+                      <n-text depth="3">{{
                         formatDuration(segment.transferTime)
                       }}</n-text>
                     </n-space>
@@ -699,26 +442,14 @@
                     <div class="segment-part segment-route">
                       <n-text strong style="font-size: 15px">
                         <span>{{ segment.train }}</span>
-                        <n-tag
-                          v-if="segment.isNonDaily"
-                          type="error"
-                          size="small"
-                          round
-                          style="margin-left: 8px"
-                          >非每日</n-tag
-                        >
+                        <n-tag v-if="segment.isNonDaily" type="error" size="small" round
+                          style="margin-left: 8px">非每日</n-tag>
                       </n-text>
-                      <n-text style="font-size: 15px; margin-left: 8px"
-                        >{{ segment.from }} → {{ segment.to }}</n-text
-                      >
+                      <n-text style="font-size: 15px; margin-left: 8px">{{ segment.from }} → {{ segment.to }}</n-text>
                     </div>
 
                     <div class="segment-part segment-details">
-                      <n-text
-                        depth="3"
-                        style="font-size: 13px; white-space: nowrap"
-                        >{{ segment.details }}</n-text
-                      >
+                      <n-text depth="3" style="font-size: 13px; white-space: nowrap">{{ segment.details }}</n-text>
                     </div>
                   </div>
                 </n-timeline-item>
@@ -727,90 +458,54 @@
               <n-collapse style="margin-top: 20px">
                 <n-collapse-item>
                   <template #header>
-                    <div
-                      @click="handleExpandJourney(journey)"
-                      style="width: 100%; user-select: none"
-                    >
-                      <n-space align="center" :size="8">
-                        <n-icon><map-outline /></n-icon>
+                    <div @click="handleExpandJourney(journey)" style="width: 100%; user-select: none">
+                      <div style="display: flex; align-items: center; gap: 8px">
+                        <n-icon>
+                          <map-outline />
+                        </n-icon>
                         <n-text>途经站点与线路图</n-text>
-                      </n-space>
+                      </div>
                     </div>
                   </template>
-                  <div
-                    v-if="journey.stationsLoading"
-                    style="text-align: center; padding: 20px"
-                  >
-                    <n-spin size="small" /><n-text
-                      depth="3"
-                      style="margin-left: 8px"
-                      >正在加载站点数据...</n-text
-                    >
+                  <div v-if="journey.stationsLoading" style="text-align: center; padding: 20px">
+                    <n-spin size="small" /><n-text depth="3" style="margin-left: 8px">正在加载站点数据...</n-text>
                   </div>
                   <div v-else-if="journey.stationsError" style="padding: 10px">
                     <n-alert type="error" :show-icon="true">{{
                       journey.stationsError
                     }}</n-alert>
                   </div>
-                  <div
-                    v-else-if="journey.allStops && journey.allStops.length > 0"
-                  >
+                  <div v-else-if="journey.allStops && journey.allStops.length > 0">
                     <div style="margin-bottom: 12px">
-                      <n-text
-                        depth="3"
-                        style="display: block; line-height: 1.6"
-                      >
-                        <span
-                          v-for="(stop, index) in journey.allStops"
-                          :key="stop.n"
-                          style="
+                      <n-text depth="3" style="display: block; line-height: 1.6">
+                        <span v-for="(stop, index) in journey.allStops" :key="stop.n" style="
                             display: inline-flex;
                             align-items: center;
                             flex-wrap: wrap;
-                          "
-                        >
+                          ">
                           {{ stop.n }}
-                          <n-tag
-                            v-for="line in stop.rn"
-                            :key="line"
-                            size="tiny"
-                            type="success"
-                            :bordered="false"
-                            style="
+                          <n-tag v-for="line in stop.rn" :key="line" size="tiny" type="success" :bordered="false" style="
                               margin-left: 4px;
                               margin-right: 4px;
                               font-size: 10px;
                               padding: 1px 6px;
-                            "
-                          >
+                            ">
                             {{ line }}
                           </n-tag>
-                          <span
-                            v-if="index < journey.allStops.length - 1"
-                            style="margin: 0 4px"
-                            >→</span
-                          >
+                          <span v-if="index < journey.allStops.length - 1" style="margin: 0 4px">→</span>
                         </span>
                       </n-text>
                     </div>
                     <MapRenderer :stops="journey.allStops" />
                   </div>
-                  <n-empty
-                    v-else
-                    description="未能获取到该线路的途经站点信息。"
-                    style="padding: 20px"
-                  />
+                  <n-empty v-else description="未能获取到该线路的途经站点信息。" style="padding: 20px" />
                 </n-collapse-item>
               </n-collapse>
             </n-card>
-            <div
-              v-if="
-                displayCount < journeys.length ||
-                (running && journeys.length >= displayCount)
-              "
-              ref="scrollObserver"
-              style="height: 20px"
-            ></div>
+            <div v-if="
+              displayCount < journeys.length ||
+              (running && journeys.length >= displayCount)
+            " ref="scrollObserver" style="height: 20px"></div>
           </n-space>
         </n-space>
       </n-layout-content>
@@ -914,7 +609,7 @@ function damerauLevenshteinDistance(a, b) {
       d[i][j] = Math.min(
         d[i - 1][j] + 1,
         d[i][j - 1] + 1,
-        d[i - 1][j - 1] + cost
+        d[i - 1][j - 1] + cost,
       );
       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
         d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
@@ -973,7 +668,7 @@ function getScoreForPinyinQuery(pinyinQuery, stationEntry) {
   if (distance <= 3) {
     const prefixLength = getCommonPrefixLength(
       pinyinQuery,
-      stationEntry.pinyin
+      stationEntry.pinyin,
     );
 
     let fuzzyScore = 90 - distance * 20 + prefixLength * 2;
@@ -1044,7 +739,7 @@ const preprocessStations = () => {
 
   processedStations.value = result;
   console.log(
-    `Preprocessing complete. Generated ${result.length} searchable entries.`
+    `Preprocessing complete. Generated ${result.length} searchable entries.`,
   );
 };
 
@@ -1087,7 +782,7 @@ const toggleTheme = () => {
   window.dispatchEvent(
     new CustomEvent("theme-changed", {
       detail: { isDark: isDark.value },
-    })
+    }),
   );
 
   localStorage.setItem("theme-updated", Date.now().toString());
@@ -1122,7 +817,7 @@ onMounted(async () => {
     isDark.value = savedTheme === "dark";
   } else {
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      "(prefers-color-scheme: dark)",
     ).matches;
     isDark.value = prefersDark;
   }
@@ -1189,18 +884,19 @@ watch(customCode, (newCode) => {
 });
 
 const primaryButtonIcon = computed(() =>
-  running.value ? StopCircleOutline : SearchOutline
+  running.value ? StopCircleOutline : SearchOutline,
 );
 const progressPercent = computed(() =>
   progressMax.value > 0
     ? Math.round((progressValue.value / progressMax.value) * 100)
-    : 0
+    : 0,
 );
 const statusType = computed(() => {
   const msg = statusMessage.value;
   if (msg.includes("错误") || msg.includes("无方案")) return "error";
   if (msg.includes("共") || msg.includes("查询到")) return "success";
-  if (running.value || msg.includes("加载") || msg.includes("初始化")) return "info";
+  if (running.value || msg.includes("加载") || msg.includes("初始化"))
+    return "info";
   if (msg.includes("就绪") || msg.includes("查询条件更改")) return "info";
   return "default";
 });
@@ -1245,15 +941,15 @@ const getStationOptions = (inputValue) => {
       if (inputPinyin) {
         const rawScoreFromPinyin = getScoreForPinyinQuery(
           inputPinyin,
-          stationEntry
+          stationEntry,
         );
         const rawScoreFromInitials = getScoreForPinyinQuery(
           inputInitials,
-          stationEntry
+          stationEntry,
         );
         const rawHomophoneScore = Math.max(
           rawScoreFromPinyin,
-          rawScoreFromInitials
+          rawScoreFromInitials,
         );
 
         if (rawHomophoneScore > 0) {
@@ -1293,7 +989,7 @@ const getStationOptions = (inputValue) => {
 const originOptions = computed(() => getStationOptions(origin.value));
 const destinationOptions = computed(() => getStationOptions(destination.value));
 const displayedJourneys = computed(() =>
-  journeys.value.slice(0, displayCount.value)
+  journeys.value.slice(0, displayCount.value),
 );
 
 const formatDuration = (m) => {
@@ -1433,7 +1129,7 @@ const handleExpandJourney = async (journey) => {
             return accumulator.concat(currentStops.slice(1));
           }
         },
-        []
+        [],
       );
       journey.allStops = finalRouteStops;
     } else {
@@ -1561,17 +1257,17 @@ const startSearch = () => {
       mode.value === "km"
         ? "start_k"
         : mode.value === "xfer"
-        ? "start_mx"
-        : "start",
+          ? "start_mx"
+          : "start",
     mtt: parseInt(mtt.value) || 0,
-    tf: trainFilter.value.map(x => x === 'NUM' ? 'N' : x).join(''),
+    tf: trainFilter.value.map((x) => (x === "NUM" ? "N" : x)).join(""),
   });
 };
 const finishSearch = () => {
   if (!running.value) return;
   console.log(
     `%c[2] finishSearch called. Reading stopReason: '${stopReason.value}'`,
-    "color: lightblue; font-weight: bold;"
+    "color: lightblue; font-weight: bold;",
   );
 
   if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
@@ -1603,7 +1299,7 @@ const stopSearch = (reason = "manual") => {
   if (running.value && w) {
     console.log(
       `%c[1] Setting stopReason to: '${reason}'`,
-      "color: orange; font-weight: bold;"
+      "color: orange; font-weight: bold;",
     );
 
     stopReason.value = reason;
@@ -1646,7 +1342,7 @@ const loadMore = () => {
   if (displayCount.value >= journeys.value.length) return;
   displayCount.value = Math.min(
     displayCount.value + BATCH_SIZE,
-    journeys.value.length
+    journeys.value.length,
   );
 };
 
@@ -1740,7 +1436,7 @@ const executeCustomQuery = async () => {
     }
 
     const AsyncFunction = Object.getPrototypeOf(
-      async function () {}
+      async function () { },
     ).constructor;
     const func = new AsyncFunction(
       "trains",
@@ -1748,14 +1444,14 @@ const executeCustomQuery = async () => {
       "schedules",
       "qry",
       "JSON",
-      customCode.value
+      customCode.value,
     );
     const result = await func(
       queryAPI.trains,
       queryAPI.stations,
       queryAPI.schedules,
       queryAPI.qry,
-      JSON
+      JSON,
     );
 
     if (!running.value) {
@@ -1859,14 +1555,16 @@ const selectTemplate = (key) => {
 
 const addQuickTemplate = () => {
   const userTemplates = loadUserTemplates();
-  const existingNames = new Set(Object.values(userTemplates).map((t) => t.name));
-  
+  const existingNames = new Set(
+    Object.values(userTemplates).map((t) => t.name),
+  );
+
   let i = 0;
   while (existingNames.has(`新模板 ${i}`)) {
     i++;
   }
   const defaultName = `新模板 ${i}`;
-  
+
   const key = addUserTemplate(defaultName, "");
   refreshTemplates();
   selectTemplate(key);
@@ -1879,10 +1577,10 @@ const startEditTemplate = (key, name) => {
 
     nextTick(() => {
       const editableSpans = document.querySelectorAll(
-        '[contenteditable="true"]'
+        '[contenteditable="true"]',
       );
       const currentSpan = Array.from(editableSpans).find((span) =>
-        span.closest(".n-button")
+        span.closest(".n-button"),
       );
       if (currentSpan) {
         currentSpan.focus();
@@ -1899,7 +1597,7 @@ const startEditTemplate = (key, name) => {
 const saveTemplateEdit = (key) => {
   const editableSpans = document.querySelectorAll('[contenteditable="true"]');
   const currentSpan = Array.from(editableSpans).find((span) =>
-    span.closest(".n-button")
+    span.closest(".n-button"),
   );
 
   const newName = currentSpan
@@ -1978,7 +1676,7 @@ watch(
       chartInstance.value = new Chart(ctx, newResult);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 let observer = null;
@@ -2004,7 +1702,7 @@ onMounted(async () => {
         }
       }
     },
-    { threshold: 0.5 }
+    { threshold: 0.5 },
   );
 });
 watch(scrollObserver, (newEl, oldEl) => {
@@ -2049,7 +1747,7 @@ watch(
       preprocessStations();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 
