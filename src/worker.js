@@ -41,6 +41,7 @@ async function init_w() {
             }
 
             const wimp = await import(
+                /* @vite-ignore */
                 new URL("./wasm/pkg/transit.js", import.meta.url)
             );
             await wimp.default(wbuf.buffer);

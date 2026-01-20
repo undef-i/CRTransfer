@@ -442,9 +442,21 @@ function __wbg_get_imports() {
         const ret = new Function(v0);
         return ret;
     };
+    imports.wbg.__wbg_now_d18023d54d4e5500 = function(arg0) {
+        const ret = arg0.now();
+        return ret;
+    };
     imports.wbg.__wbg_onjny_fd5dc269651b9cc2 = function(arg0, arg1) {
         var v0 = getCachedStringFromWasm0(arg0, arg1);
         on_jny(v0);
+    };
+    imports.wbg.__wbg_performance_704644393c4d3310 = function(arg0) {
+        const ret = arg0.performance;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_performance_c185c0cdc2766575 = function(arg0) {
+        const ret = arg0.performance;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
     };
     imports.wbg.__wbg_queueMicrotask_97d92b4fcc8a61c5 = function(arg0) {
         queueMicrotask(arg0);
@@ -498,7 +510,7 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper847 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper851 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 42, __wbg_adapter_20);
         return ret;
     };

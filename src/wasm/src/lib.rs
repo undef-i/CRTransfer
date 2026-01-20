@@ -86,7 +86,7 @@ pub struct Jny {
 }
 
 thread_local! {
-    static DAT: RefCell<Option<Rc<HashMap<usize, Vec<Rc<R>>>>>> = RefCell::new(None);
+    static DAT: RefCell<Option<Rc<Vec<Vec<Rc<R>>>>>> = RefCell::new(None);
     static SCD: RefCell<Option<HashMap<usize, Vec<usize>>>> = RefCell::new(None);
     static S2I: RefCell<Option<HashMap<String, usize>>> = RefCell::new(None);
     static I2S: RefCell<Option<Vec<String>>> = RefCell::new(None);
@@ -95,8 +95,9 @@ thread_local! {
 
     static RAW_RDAT: RefCell<Option<Vec<RawTrain>>> = RefCell::new(None);
     static RAW_SCDAT: RefCell<Option<RawScdat>> = RefCell::new(None);
-
-    static STOP: RefCell<bool> = RefCell::new(false);
+    static REQ_ID: RefCell<u32> = RefCell::new(0);
+    static MLID: RefCell<u32> = RefCell::new(0);
+    static MSID: RefCell<usize> = RefCell::new(0);
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +126,18 @@ impl Ord for St {
         o.tdur.cmp(&self.tdur).then_with(|| self.idt.cmp(&o.idt))
     }
 }
+impl Drop for St {
+    fn drop(&mut self) {
+        let mut curr = self.p.take();
+        while let Some(node) = curr {
+            if let Ok(mut inner) = Rc::try_unwrap(node) {
+                curr = inner.p.take();
+            } else {
+                break;
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct StK {
@@ -149,6 +162,18 @@ impl Ord for StK {
         o.tkm.cmp(&self.tkm)
     }
 }
+impl Drop for StK {
+    fn drop(&mut self) {
+        let mut curr = self.p.take();
+        while let Some(node) = curr {
+            if let Ok(mut inner) = Rc::try_unwrap(node) {
+                curr = inner.p.take();
+            } else {
+                break;
+            }
+        }
+    }
+}
 #[derive(Debug, Clone)]
 struct StMx {
     tdur: i32,
@@ -158,6 +183,18 @@ struct StMx {
     x: i32,
     p: Option<Rc<StMx>>,
     r: Option<Rc<R>>,
+}
+impl Drop for StMx {
+    fn drop(&mut self) {
+        let mut curr = self.p.take();
+        while let Some(node) = curr {
+            if let Ok(mut inner) = Rc::try_unwrap(node) {
+                curr = inner.p.take();
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 const RDAT_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rdat.json.br"));
@@ -200,7 +237,7 @@ pub fn init() -> Result<(), JsValue> {
         })
     };
 
-    let mut dat: HashMap<usize, Vec<Rc<R>>> = HashMap::with_capacity(500000);
+    let mut temp_dat: HashMap<usize, Vec<Rc<R>>> = HashMap::with_capacity(500000);
     let mut global_leg_id_counter: u32 = 0;
 
     for train in &rdat_root.t {
@@ -218,7 +255,7 @@ pub fn init() -> Result<(), JsValue> {
             if b.d != -1 && a.a != -1 && a.a > b.d && a.km > b.km {
                 let b_sid = get_sid(&b.n, &mut s2i, &mut i2s);
                 let a_sid = get_sid(&a.n, &mut s2i, &mut i2s);
-                dat.entry(b_sid).or_default().push(Rc::new(R {
+                temp_dat.entry(b_sid).or_default().push(Rc::new(R {
                     tn: train.tn.clone(),
                     bs: b_sid,
                     al: a_sid,
@@ -230,6 +267,12 @@ pub fn init() -> Result<(), JsValue> {
                 }));
             }
         }
+    }
+
+    let max_sid = i2s.len();
+    let mut dat: Vec<Vec<Rc<R>>> = vec![Vec::new(); max_sid];
+    for (sid, routes) in temp_dat {
+        dat[sid] = routes;
     }
 
     let mut scd: HashMap<usize, Vec<usize>> = HashMap::with_capacity(5000);
@@ -255,6 +298,8 @@ pub fn init() -> Result<(), JsValue> {
     I2S.with(|cell| *cell.borrow_mut() = Some(i2s));
     LOCATIONS.with(|cell| *cell.borrow_mut() = Some(locations));
     RDAT_MAP.with(|cell| *cell.borrow_mut() = Some(rdat_map));
+    MLID.with(|cell| *cell.borrow_mut() = global_leg_id_counter);
+    MSID.with(|cell| *cell.borrow_mut() = max_sid);
 
     Ok(())
 }
@@ -285,17 +330,12 @@ pub fn query_raw_scdat() -> Result<String, JsValue> {
 
 #[wasm_bindgen]
 pub fn stop() {
-    STOP.with(|s| {
-        *s.borrow_mut() = true;
+    REQ_ID.with(|s| {
+        *s.borrow_mut() += 1;
     });
 }
-fn is_stopped() -> bool {
-    STOP.with(|s| *s.borrow())
-}
-fn rst_stop() {
-    STOP.with(|s| {
-        *s.borrow_mut() = false;
-    });
+fn check_req_id(id: u32) -> bool {
+    REQ_ID.with(|s| *s.borrow() == id)
 }
 fn build_tf_table(tf: &str) -> [bool; 256] {
     let mut table = [false; 256];
@@ -498,6 +538,17 @@ extern "C" {
     fn on_jny(j: &str);
 }
 
+fn g_perf() -> Option<web_sys::Performance> {
+    let g = js_sys::global();
+    if let Ok(wscope) = g.dyn_into::<WorkerGlobalScope>() {
+        wscope.performance()
+    } else if let Some(win) = window() {
+        win.performance()
+    } else {
+        None
+    }
+}
+
 async fn sleep(ms: i32) -> Result<(), JsValue> {
     let p = Promise::new(&mut |resolve, _| {
         let g = js_sys::global();
@@ -514,6 +565,7 @@ async fn sleep(ms: i32) -> Result<(), JsValue> {
     Ok(())
 }
 
+#[derive(Clone)]
 struct PStore {
     b: Vec<Vec<(i32, i32)>>,
 }
@@ -545,7 +597,11 @@ impl PStore {
 
 #[wasm_bindgen]
 pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
-    rst_stop();
+    let my_id = REQ_ID.with(|r| {
+        let mut m = r.borrow_mut();
+        *m += 1;
+        *m
+    });
     let rfs_rc = DAT
         .with(|dat| dat.borrow().clone())
         .ok_or_else(|| JsValue::from_str("dat not initd"))?;
@@ -559,10 +615,13 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
         [did].into_iter().collect()
     };
     let tf_table = build_tf_table(tf);
+    let perf = g_perf().ok_or_else(|| JsValue::from_str("Perf !found"))?;
+    let mut ly_time = perf.now();
     let mut pq = BinaryHeap::with_capacity(50000);
-    let mut v: HashMap<usize, PStore> = HashMap::with_capacity(5000);
+    let mut v: Vec<Option<PStore>> = Vec::new();
     for &osid in &osids {
-        if let Some(rs) = rfs.get(&osid) {
+        if osid < rfs.len() {
+            let rs = &rfs[osid];
             for r in rs {
                 if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
@@ -582,10 +641,14 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
     let mut i = 0;
     while let Some(c) = pq.pop() {
         i += 1;
-        if i % 10000 == 0 {
-            sleep(0).await?;
+        if i & 2047 == 0 {
+            let now = perf.now();
+            if now - ly_time > 15.0 {
+                sleep(0).await?;
+                ly_time = perf.now();
+            }
         }
-        if is_stopped() {
+        if !check_req_id(my_id) {
             break;
         }
         if dset.contains(&c.sid) {
@@ -603,13 +666,17 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
             }
             continue;
         }
-        let s = v.entry(c.sid).or_insert_with(PStore::new);
+        if c.sid >= v.len() {
+            v.resize(c.sid + 1, None);
+        }
+        let s = v[c.sid].get_or_insert_with(PStore::new);
         if !s.add(c.aat, c.idt, c.x) {
             continue;
         }
-        if let Some(next_rs) = rfs.get(&c.sid) {
+        if c.sid < rfs.len() {
+            let next_rs = &rfs[c.sid];
             for next_r in next_rs {
-                if is_stopped() {
+                if !check_req_id(my_id) {
                     break;
                 }
                 if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
@@ -659,7 +726,11 @@ fn mk_path_mx(st: &StMx) -> Vec<PS> {
 }
 #[wasm_bindgen(js_name = find_mx)]
 pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
-    rst_stop();
+    let my_id = REQ_ID.with(|r| {
+        let mut m = r.borrow_mut();
+        *m += 1;
+        *m
+    });
     let rfs_rc = DAT
         .with(|dat| dat.borrow().clone())
         .ok_or_else(|| JsValue::from_str("dat not initd"))?;
@@ -673,10 +744,14 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
         [did].into_iter().collect()
     };
     let tf_table = build_tf_table(tf);
+    let perf = g_perf().ok_or_else(|| JsValue::from_str("Perf !found"))?;
+    let mut ly_time = perf.now();
     let mut q = VecDeque::with_capacity(50000);
-    let mut visited: HashMap<(usize, u32), i32> = HashMap::with_capacity(10000);
+    let max_leg_id = MLID.with(|cell| *cell.borrow());
+    let mut visited: Vec<i32> = vec![i32::MAX; max_leg_id as usize + 1];
     for &osid in &osids {
-        if let Some(rs) = rfs.get(&osid) {
+        if osid < rfs.len() {
+            let rs = &rfs[osid];
             for r in rs {
                 if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
@@ -697,10 +772,14 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
     let mut i = 0;
     while let Some(c_val) = q.pop_front() {
         i += 1;
-        if i % 10000 == 0 {
-            sleep(0).await?;
+        if i & 2047 == 0 {
+            let now = perf.now();
+            if now - ly_time > 15.0 {
+                sleep(0).await?;
+                ly_time = perf.now();
+            }
         }
-        if is_stopped() {
+        if !check_req_id(my_id) {
             break;
         }
         let c = Rc::new(c_val);
@@ -708,12 +787,11 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
             continue;
         }
         if let Some(r) = &c.r {
-            if let Some(&prev_x) = visited.get(&(c.sid, r.leg_id)) {
-                if prev_x <= c.x {
-                    continue;
-                }
+            let leg = r.leg_id as usize;
+            if visited[leg] <= c.x {
+                continue;
             }
-            visited.insert((c.sid, r.leg_id), c.x);
+            visited[leg] = c.x;
         }
         if dset.contains(&c.sid) {
             min_found_x = c.x;
@@ -731,9 +809,10 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
             }
             continue;
         }
-        if let Some(next_rs) = rfs.get(&c.sid) {
+        if c.sid < rfs.len() {
+            let next_rs = &rfs[c.sid];
             for next_r in next_rs {
-                if is_stopped() {
+                if !check_req_id(my_id) {
                     break;
                 }
                 if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
@@ -788,7 +867,11 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
 }
 #[wasm_bindgen(js_name = find_k)]
 pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
-    rst_stop();
+    let my_id = REQ_ID.with(|r| {
+        let mut m = r.borrow_mut();
+        *m += 1;
+        *m
+    });
     let rfs_rc = DAT
         .with(|dat| dat.borrow().clone())
         .ok_or("dat not initd")?;
@@ -802,10 +885,14 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
         [did].into_iter().collect()
     };
     let tf_table = build_tf_table(tf);
+    let perf = g_perf().ok_or_else(|| JsValue::from_str("Perf !found"))?;
+    let mut ly_time = perf.now();
     let mut pq = BinaryHeap::with_capacity(4000000);
-    let mut v: HashMap<usize, i32> = HashMap::with_capacity(5000);
+    let max_sid = MSID.with(|cell| *cell.borrow());
+    let mut v: Vec<i32> = vec![i32::MAX; max_sid];
     for &osid in &osids {
-        if let Some(rs) = rfs.get(&osid) {
+        if osid < rfs.len() {
+            let rs = &rfs[osid];
             for r in rs {
                 if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 pq.push(StK {
@@ -820,18 +907,20 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
     let mut i = 0;
     while let Some(c) = pq.pop() {
         i += 1;
-        if i % 10000 == 0 {
-            sleep(0).await?;
-        }
-        if is_stopped() {
-            break;
-        }
-        if let Some(&min_km) = v.get(&c.sid) {
-            if c.tkm >= min_km {
-                continue;
+        if i & 2047 == 0 {
+            let now = perf.now();
+            if now - ly_time > 15.0 {
+                sleep(0).await?;
+                ly_time = perf.now();
             }
         }
-        v.insert(c.sid, c.tkm);
+        if !check_req_id(my_id) {
+            break;
+        }
+        if v[c.sid] <= c.tkm {
+            continue;
+        }
+        v[c.sid] = c.tkm;
         if dset.contains(&c.sid) {
             let p = mk_path_k(&c);
             let jny = Jny {
@@ -847,9 +936,10 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
             }
             continue;
         }
-        if let Some(next_rs) = rfs.get(&c.sid) {
+        if c.sid < rfs.len() {
+            let next_rs = &rfs[c.sid];
             for next_r in next_rs {
-                if is_stopped() {
+                if !check_req_id(my_id) {
                     break;
                 }
                 if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }

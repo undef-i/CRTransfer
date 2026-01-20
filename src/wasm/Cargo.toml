@@ -22,7 +22,7 @@ serde_json = "1.0"
 brotli = "7.0"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["Window", "WorkerGlobalScope", "console"] }
+web-sys = { version = "0.3", features = ["Window", "WorkerGlobalScope", "console", "Performance"] }
 cargo-lint = "0.1.0"
 simd-json = { version = "0.13", features = ["serde_impl"] }
 
