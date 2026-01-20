@@ -86,7 +86,7 @@ pub struct Jny {
 }
 
 thread_local! {
-    static DAT: RefCell<Option<HashMap<usize, Vec<R>>>> = RefCell::new(None);
+    static DAT: RefCell<Option<Rc<HashMap<usize, Vec<Rc<R>>>>>> = RefCell::new(None);
     static SCD: RefCell<Option<HashMap<usize, Vec<usize>>>> = RefCell::new(None);
     static S2I: RefCell<Option<HashMap<String, usize>>> = RefCell::new(None);
     static I2S: RefCell<Option<Vec<String>>> = RefCell::new(None);
@@ -107,7 +107,7 @@ struct St {
     idt: i32,
     x: i32,
     p: Option<Rc<St>>,
-    r: Option<R>,
+    r: Option<Rc<R>>,
 }
 impl PartialEq for St {
     fn eq(&self, o: &Self) -> bool {
@@ -131,7 +131,7 @@ struct StK {
     tkm: i32,
     sid: usize,
     p: Option<Rc<StK>>,
-    r: Option<R>,
+    r: Option<Rc<R>>,
 }
 impl PartialEq for StK {
     fn eq(&self, o: &Self) -> bool {
@@ -157,7 +157,7 @@ struct StMx {
     idt: i32,
     x: i32,
     p: Option<Rc<StMx>>,
-    r: Option<R>,
+    r: Option<Rc<R>>,
 }
 
 const RDAT_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rdat.json.br"));
@@ -200,7 +200,7 @@ pub fn init() -> Result<(), JsValue> {
         })
     };
 
-    let mut dat: HashMap<usize, Vec<R>> = HashMap::with_capacity(500000);
+    let mut dat: HashMap<usize, Vec<Rc<R>>> = HashMap::with_capacity(500000);
     let mut global_leg_id_counter: u32 = 0;
 
     for train in &rdat_root.t {
@@ -218,7 +218,7 @@ pub fn init() -> Result<(), JsValue> {
             if b.d != -1 && a.a != -1 && a.a > b.d && a.km > b.km {
                 let b_sid = get_sid(&b.n, &mut s2i, &mut i2s);
                 let a_sid = get_sid(&a.n, &mut s2i, &mut i2s);
-                dat.entry(b_sid).or_default().push(R {
+                dat.entry(b_sid).or_default().push(Rc::new(R {
                     tn: train.tn.clone(),
                     bs: b_sid,
                     al: a_sid,
@@ -227,7 +227,7 @@ pub fn init() -> Result<(), JsValue> {
                     km: a.km - b.km,
                     leg_id: current_leg_id,
                     next_leg_id,
-                });
+                }));
             }
         }
     }
@@ -249,7 +249,7 @@ pub fn init() -> Result<(), JsValue> {
     let rdat_map: HashMap<String, RawTrain> =
         rdat_root.t.into_iter().map(|t| (t.tn.clone(), t)).collect();
 
-    DAT.with(|cell| *cell.borrow_mut() = Some(dat));
+    DAT.with(|cell| *cell.borrow_mut() = Some(Rc::new(dat)));
     SCD.with(|cell| *cell.borrow_mut() = Some(scd));
     S2I.with(|cell| *cell.borrow_mut() = Some(s2i));
     I2S.with(|cell| *cell.borrow_mut() = Some(i2s));
@@ -339,9 +339,9 @@ fn cwait(arr: i32, dep: i32) -> i32 {
 fn mk_p_base<StLike, F>(st: &StLike, extractor: F) -> Vec<PS>
 where
     StLike: Clone,
-    F: Fn(&StLike) -> (Option<Rc<StLike>>, Option<R>, i32),
+    F: Fn(&StLike) -> (Option<Rc<StLike>>, Option<Rc<R>>, i32),
 {
-    let mut segs: Vec<(Rc<StLike>, R)> = Vec::new();
+    let mut segs: Vec<(Rc<StLike>, Rc<R>)> = Vec::new();
     let mut cur = Some(Rc::new(st.clone()));
     while let Some(c) = cur {
         let (p, r_opt, _) = extractor(&c);
@@ -356,7 +356,8 @@ where
     }
     let mut p: Vec<PS> = Vec::new();
     let mut seg_iter = segs.into_iter();
-    let (mut lc, mut mr) = seg_iter.next().unwrap();
+    let (mut lc, first_r) = seg_iter.next().unwrap();
+    let mut mr = first_r.as_ref().clone();
     let (_, _, first_aat) = extractor(&lc);
     let mut fdt = first_aat - mr.dur;
     let mut wtb = if let Some(p_ctx) = extractor(&lc).0 {
@@ -364,7 +365,8 @@ where
     } else {
         0
     };
-    for (c, r) in seg_iter {
+    for (c, r_rc) in seg_iter {
+        let r = &*r_rc;
         if mr.next_leg_id == Some(r.leg_id) {
             mr.al = r.al;
             mr.km += r.km;
@@ -381,7 +383,7 @@ where
             } else {
                 0
             };
-            mr = r;
+            mr = r.clone();
             lc = c;
         }
     }
@@ -400,7 +402,7 @@ fn mk_path_k(st: &StK) -> Vec<PS> {
         if let Some(ref r) = c.r {
             segs.push(PS {
                 wtb: 0,
-                r: r.clone(),
+                r: r.as_ref().clone(),
             });
         }
         cur = c.p.clone();
@@ -544,9 +546,10 @@ impl PStore {
 #[wasm_bindgen]
 pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
-    let rfs = DAT
-        .with(|dat| dat.borrow().as_ref().cloned())
+    let rfs_rc = DAT
+        .with(|dat| dat.borrow().clone())
         .ok_or_else(|| JsValue::from_str("dat not initd"))?;
+    let rfs = rfs_rc.as_ref();
     let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
     let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
     let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
@@ -561,7 +564,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
-                if !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
+                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     pq.push(St {
                         tdur: r.dur,
@@ -609,7 +612,7 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
                 if is_stopped() {
                     break;
                 }
-                if !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
+                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -657,9 +660,10 @@ fn mk_path_mx(st: &StMx) -> Vec<PS> {
 #[wasm_bindgen(js_name = find_mx)]
 pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
-    let rfs = DAT
-        .with(|dat| dat.borrow().as_ref().cloned())
+    let rfs_rc = DAT
+        .with(|dat| dat.borrow().clone())
         .ok_or_else(|| JsValue::from_str("dat not initd"))?;
+    let rfs = rfs_rc.as_ref();
     let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
     let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
     let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
@@ -674,7 +678,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
-                if !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
+                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     q.push_back(StMx {
                         tdur: r.dur,
@@ -732,7 +736,7 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
                 if is_stopped() {
                     break;
                 }
-                if !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
+                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -785,9 +789,10 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
 #[wasm_bindgen(js_name = find_k)]
 pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
     rst_stop();
-    let rfs = DAT
-        .with(|dat| dat.borrow().as_ref().cloned())
+    let rfs_rc = DAT
+        .with(|dat| dat.borrow().clone())
         .ok_or("dat not initd")?;
+    let rfs = rfs_rc.as_ref();
     let oid = g_sid(o).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", o)))?;
     let did = g_sid(d).ok_or_else(|| JsValue::from_str(&format!("'{}' not found", d)))?;
     let osids = if esc_o { g_sgrp(oid) } else { vec![oid] };
@@ -802,7 +807,7 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
     for &osid in &osids {
         if let Some(rs) = rfs.get(&osid) {
             for r in rs {
-                if !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
+                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
                 pq.push(StK {
                     tkm: r.km,
                     sid: r.al,
@@ -847,7 +852,7 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
                 if is_stopped() {
                     break;
                 }
-                if !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
+                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
                 let new_tkm = c.tkm + next_r.km;
                 pq.push(StK {
                     tkm: new_tkm,
