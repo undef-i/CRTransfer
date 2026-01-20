@@ -26,10 +26,12 @@ jobs:
     - name: Install latest binaryen
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget
-        wget https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz
-        tar -xzf binaryen-version_116-x86_64-linux.tar.gz
-        sudo mv binaryen-version_116/bin/wasm-opt /usr/local/bin/
+        sudo apt-get install -y wget jq
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/WebAssembly/binaryen/releases/latest | jq -r '.tag_name')
+        echo "Installing binaryen $LATEST_VERSION"
+        wget https://github.com/WebAssembly/binaryen/releases/download/${LATEST_VERSION}/binaryen-${LATEST_VERSION}-x86_64-linux.tar.gz
+        tar -xzf binaryen-${LATEST_VERSION}-x86_64-linux.tar.gz
+        sudo mv binaryen-${LATEST_VERSION}/bin/wasm-opt /usr/local/bin/
         sudo chmod +x /usr/local/bin/wasm-opt
     - name: Check tool versions
       run: |
