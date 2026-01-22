@@ -11,6 +11,7 @@ fn main() {
         ("../../data/rdat.json", "rdat.json.br"),
         ("../../data/scdat.json", "scdat.json.br"),
         ("../../data/sl.json", "sl.json.br"),
+        ("../../data/rts.json", "rts.json.br"),
     ];
 
     println!("cargo:rerun-if-changed=build.rs");

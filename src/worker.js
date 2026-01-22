@@ -114,6 +114,22 @@ self.onmessage = async function (e) {
                     requestId: requestId,
                 });
             }
+        } else if (t === "gfd") {
+            try {
+                const res = wm.gfd(d.n);
+                self.postMessage({
+                    t: "qr",
+                    d: JSON.parse(res),
+                    requestId: requestId,
+                });
+            } catch (err) {
+                console.error("gfd err:", err);
+                self.postMessage({
+                    t: "qry_err",
+                    d: err.toString() || "gfd unk err",
+                    requestId: requestId,
+                });
+            }
         } else if (t === "qry") {
             try {
                 let r;
@@ -121,6 +137,8 @@ self.onmessage = async function (e) {
                     r = wm.qry_rdat(d.k);
                 } else if (d.t === "scdat") {
                     r = wm.qry_scdat(d.k);
+                } else if (d.t === "rts") {
+                    r = wm.qrr();
                 }
                 self.postMessage({
                     t: "qr",

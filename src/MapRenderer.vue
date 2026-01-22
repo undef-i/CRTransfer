@@ -150,22 +150,22 @@ const initializeMap = (element) => {
 
   const tileSource = isChinaUser.value
     ? {
-        type: "raster",
-        tiles: [
-          "http://wprd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
-          "http://wprd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
-          "http://wprd03.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
-          "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
-        ],
-        tileSize: 128,
-        attribution: "© 高德地图",
-      }
+      type: "raster",
+      tiles: [
+        "http://wprd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
+        "http://wprd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
+        "http://wprd03.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
+        "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}",
+      ],
+      tileSize: 128,
+      attribution: "© 高德地图",
+    }
     : {
-        type: "raster",
-        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors",
-      };
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
+    };
 
   mapInstance = new maplibregl.Map({
     container: element,
@@ -226,6 +226,8 @@ const initializeMap = (element) => {
           properties: {
             name: s.n,
             lines: s.rn || [],
+            isStop: s.st,
+            lineName: s.ln
           },
           geometry: {
             type: "Point",
@@ -234,16 +236,27 @@ const initializeMap = (element) => {
         })),
       },
     });
-
     mapInstance.addLayer({
       id: "stations-layer",
       type: "circle",
       source: "stations",
       paint: {
-        "circle-radius": 4,
-        "circle-color": "#000000",
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff",
+        "circle-radius": [
+          "case",
+          ["==", ["get", "isStop"], false], 2,
+          4
+        ],
+        "circle-color": [
+          "case",
+          ["==", ["get", "isStop"], false], "#888888",
+          colors.markerFillColor
+        ],
+        "circle-stroke-width": [
+          "case",
+          ["==", ["get", "isStop"], false], 0,
+          2
+        ],
+        "circle-stroke-color": colors.markerColor,
       },
     });
 
@@ -255,17 +268,16 @@ const initializeMap = (element) => {
       const popupContent = document.createElement("div");
       popupContent.innerHTML = `
         <div style="font-weight: bold; margin-bottom: 4px; color: black">${name}</div>
-        ${
-          lines.length > 0
-            ? `<div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;">
+        ${lines.length > 0
+          ? `<div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;">
             ${lines
-              .map(
-                (line) =>
-                  `<span style="background: #1a7f37; color: white; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500;">${line}</span>`
-              )
-              .join("")}
+            .map(
+              (line) =>
+                `<span style="background: #1a7f37; color: white; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500;">${line}</span>`
+            )
+            .join("")}
           </div>`
-            : ""
+          : ""
         }
       `;
 
@@ -356,6 +368,7 @@ watch(
   margin-top: 12px;
   overflow: hidden;
 }
+
 .map-overlay {
   position: absolute;
   top: 0;

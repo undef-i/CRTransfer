@@ -47,6 +47,50 @@ pub struct RawScdat {
     pub g: Vec<RawScGroup>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawRtsStation {
+    pub n: String,
+    pub d: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawRtsLine {
+    pub i: i32,
+    pub n: String,
+    pub s: Vec<RawRtsStation>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawRtsRouteNode {
+    pub n: String,
+    pub l: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RawRtsRoute {
+    pub c: String,
+    pub s: Vec<RawRtsRouteNode>,
+    pub e: String,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct RawRts {
+    pub l: Vec<RawRtsLine>,
+    pub r: Vec<RawRtsRoute>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StD {
+    pub n: String,
+    pub lat: f64,
+    pub lon: f64,
+    pub rn: Vec<String>,
+    pub st: bool,
+    pub a: i32,
+    pub d: i32,
+    pub ln: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct R {
     pub tn: String,
@@ -95,6 +139,11 @@ thread_local! {
 
     static RAW_RDAT: RefCell<Option<Vec<RawTrain>>> = RefCell::new(None);
     static RAW_SCDAT: RefCell<Option<RawScdat>> = RefCell::new(None);
+    static RAW_RTS: RefCell<Option<RawRts>> = RefCell::new(None);
+
+    static RTS_ROUTE_MAP: RefCell<Option<HashMap<String, RawRtsRoute>>> = RefCell::new(None);
+    static RTS_LINE_MAP: RefCell<Option<HashMap<i32, RawRtsLine>>> = RefCell::new(None);
+
     static REQ_ID: RefCell<u32> = RefCell::new(0);
     static MLID: RefCell<u32> = RefCell::new(0);
     static MSID: RefCell<usize> = RefCell::new(0);
@@ -200,6 +249,7 @@ impl Drop for StMx {
 const RDAT_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rdat.json.br"));
 const SCDAT_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/scdat.json.br"));
 const SL_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/sl.json.br"));
+const RTS_JSON_BR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rts.json.br"));
 
 #[wasm_bindgen(js_name = init)]
 pub fn init() -> Result<(), JsValue> {
@@ -216,16 +266,32 @@ pub fn init() -> Result<(), JsValue> {
     let mut rdat_json = decompress(RDAT_JSON_BR)?;
     let mut scdat_json = decompress(SCDAT_JSON_BR)?;
     let mut sl_json = decompress(SL_JSON_BR)?;
+    let mut rts_json = decompress(RTS_JSON_BR)?;
 
     let rdat_root: RawRdat = unsafe { simd_json::from_str(&mut rdat_json) }
         .map_err(|e| JsValue::from_str(&format!("Failed to parse rdat.json: {}", e)))?;
     let scdat_root: RawScdat = unsafe { simd_json::from_str(&mut scdat_json) }
         .map_err(|e| JsValue::from_str(&format!("Failed to parse scdat.json: {}", e)))?;
+    let rts_root: RawRts = unsafe { simd_json::from_str(&mut rts_json) }
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse rts.json: {}", e)))?;
     let locations: HashMap<String, SL> = unsafe { simd_json::from_str(&mut sl_json) }
         .map_err(|e| JsValue::from_str(&format!("Failed to parse sl.json: {}", e)))?;
 
+    let mut rts_route_map = HashMap::new();
+    for r in &rts_root.r {
+        rts_route_map.insert(r.c.clone(), r.clone());
+    }
+
+    let mut rts_line_map = HashMap::new();
+    for l in &rts_root.l {
+        rts_line_map.insert(l.i, l.clone());
+    }
+
     RAW_RDAT.with(|cell| *cell.borrow_mut() = Some(rdat_root.t.clone()));
     RAW_SCDAT.with(|cell| *cell.borrow_mut() = Some(scdat_root.clone()));
+    RAW_RTS.with(|cell| *cell.borrow_mut() = Some(rts_root));
+    RTS_ROUTE_MAP.with(|cell| *cell.borrow_mut() = Some(rts_route_map));
+    RTS_LINE_MAP.with(|cell| *cell.borrow_mut() = Some(rts_line_map));
 
     let mut s2i: HashMap<String, usize> = HashMap::new();
     let mut i2s: Vec<String> = Vec::new();
@@ -328,6 +394,18 @@ pub fn query_raw_scdat() -> Result<String, JsValue> {
     })
 }
 
+#[wasm_bindgen(js_name = qrr)]
+pub fn qrr() -> Result<String, JsValue> {
+    RAW_RTS.with(|cell| {
+        if let Some(rts) = cell.borrow().as_ref() {
+            serde_json::to_string(rts)
+                .map_err(|e| JsValue::from_str(&format!("Failed to serialize rts: {}", e)))
+        } else {
+            Err(JsValue::from_str("rts not initialized"))
+        }
+    })
+}
+
 #[wasm_bindgen]
 pub fn stop() {
     REQ_ID.with(|s| {
@@ -340,14 +418,18 @@ fn check_req_id(id: u32) -> bool {
 fn build_tf_table(tf: &str) -> [bool; 256] {
     let mut table = [false; 256];
     if tf.is_empty() {
-        for i in 0..256 { table[i] = true; }
+        for i in 0..256 {
+            table[i] = true;
+        }
         return table;
     }
     for b in tf.bytes() {
         if b == b'N' {
-             for dig in b'0'..=b'9' { table[dig as usize] = true; }
+            for dig in b'0'..=b'9' {
+                table[dig as usize] = true;
+            }
         } else {
-             table[b as usize] = true;
+            table[b as usize] = true;
         }
     }
     table
@@ -534,6 +616,99 @@ pub fn gts(tn: &str, dtr: i32, atr: i32) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
+pub fn gfd(tn: &str) -> Result<JsValue, JsValue> {
+    let rdat_map_opt = RDAT_MAP.with(|c| c.borrow().clone());
+    let rdat_map = rdat_map_opt.ok_or("rdat!init")?;
+    let train_sched = match rdat_map.get(tn) {
+        Some(s) => s,
+        None => return Err(JsValue::from_str("tn!fnd")),
+    };
+
+    let mut stops_map: HashMap<String, (i32, i32)> = HashMap::new();
+    for s in &train_sched.s {
+        stops_map.insert(s.n.clone(), (s.a, s.d));
+    }
+
+    let route_opt = RTS_ROUTE_MAP.with(|c| c.borrow().clone());
+    let rts_routes = route_opt.ok_or("rts!init")?;
+
+    let route = match rts_routes.get(tn) {
+        Some(r) => r,
+        None => return Err(JsValue::from_str("no_route_data")),
+    };
+
+    let line_map_opt = RTS_LINE_MAP.with(|c| c.borrow().clone());
+    let lines = line_map_opt.ok_or("ln!init")?;
+
+    let mut full_path: Vec<StD> = Vec::new();
+    let mut last_station_name = String::new();
+
+    for i in 0..route.s.len() {
+        let node = &route.s[i];
+        let from_station = &node.n;
+        let line_id = node.l;
+
+        let to_station = if i < route.s.len() - 1 {
+            &route.s[i + 1].n
+        } else {
+            &route.e
+        };
+
+        let line = match lines.get(&line_id) {
+            Some(l) => l,
+            None => continue,
+        };
+
+        let idx_a = line.s.iter().position(|s| s.n == *from_station);
+        let idx_b = line.s.iter().position(|s| s.n == *to_station);
+
+        if let (Some(start), Some(end)) = (idx_a, idx_b) {
+            let segment: Vec<&RawRtsStation> = if start <= end {
+                line.s[start..=end].iter().collect()
+            } else {
+                line.s[end..=start].iter().rev().collect()
+            };
+
+            for raw_st in segment {
+                if raw_st.n == last_station_name {
+                    if let Some(last) = full_path.last_mut() {
+                        if !last.rn.contains(&line.n) {
+                            last.ln = format!("{}/{}", last.ln, line.n);
+                            last.rn.push(line.n.clone());
+                        }
+                    }
+                    continue;
+                }
+
+                let is_stop = stops_map.contains_key(&raw_st.n);
+                let (arr, dep) = stops_map.get(&raw_st.n).unwrap_or(&(-1, -1));
+
+                let loc = g_location(&raw_st.n).unwrap_or(SL {
+                    lat: None,
+                    lon: None,
+                    rn: None,
+                });
+
+                full_path.push(StD {
+                    n: raw_st.n.clone(),
+                    lat: loc.lat.unwrap_or(0.0),
+                    lon: loc.lon.unwrap_or(0.0),
+                    rn: vec![line.n.clone()],
+                    st: is_stop,
+                    a: *arr,
+                    d: *dep,
+                    ln: line.n.clone(),
+                });
+                last_station_name = raw_st.n.clone();
+            }
+        }
+    }
+
+    serde_json::to_string(&full_path)
+        .map_err(|e| JsValue::from_str(&e.to_string()))
+        .map(JsValue::from)
+}
+#[wasm_bindgen]
 extern "C" {
     fn on_jny(j: &str);
 }
@@ -596,7 +771,14 @@ impl PStore {
 }
 
 #[wasm_bindgen]
-pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
+pub async fn find(
+    o: &str,
+    d: &str,
+    mtt: i32,
+    esc_o: bool,
+    esc_d: bool,
+    tf: &str,
+) -> Result<(), JsValue> {
     let my_id = REQ_ID.with(|r| {
         let mut m = r.borrow_mut();
         *m += 1;
@@ -623,7 +805,9 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
         if osid < rfs.len() {
             let rs = &rfs[osid];
             for r in rs {
-                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
+                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] {
+                    continue;
+                }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     pq.push(St {
                         tdur: r.dur,
@@ -679,7 +863,9 @@ pub async fn find(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str
                 if !check_req_id(my_id) {
                     break;
                 }
-                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
+                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] {
+                    continue;
+                }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -725,7 +911,14 @@ fn mk_path_mx(st: &StMx) -> Vec<PS> {
     mk_p_base(st, |s| (s.p.clone(), s.r.clone(), s.aat))
 }
 #[wasm_bindgen(js_name = find_mx)]
-pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &str) -> Result<(), JsValue> {
+pub async fn find_mx(
+    o: &str,
+    d: &str,
+    mtt: i32,
+    esc_o: bool,
+    esc_d: bool,
+    tf: &str,
+) -> Result<(), JsValue> {
     let my_id = REQ_ID.with(|r| {
         let mut m = r.borrow_mut();
         *m += 1;
@@ -753,7 +946,9 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
         if osid < rfs.len() {
             let rs = &rfs[osid];
             for r in rs {
-                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
+                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] {
+                    continue;
+                }
                 if let Some(aat) = r.dtr.checked_add(r.dur) {
                     q.push_back(StMx {
                         tdur: r.dur,
@@ -815,7 +1010,9 @@ pub async fn find_mx(o: &str, d: &str, mtt: i32, esc_o: bool, esc_d: bool, tf: &
                 if !check_req_id(my_id) {
                     break;
                 }
-                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
+                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] {
+                    continue;
+                }
                 let is_cont = if let Some(ref prev_r) = c.r {
                     prev_r.next_leg_id == Some(next_r.leg_id)
                 } else {
@@ -894,7 +1091,9 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
         if osid < rfs.len() {
             let rs = &rfs[osid];
             for r in rs {
-                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] { continue; }
+                if r.tn.is_empty() || !tf_table[r.tn.as_bytes()[0] as usize] {
+                    continue;
+                }
                 pq.push(StK {
                     tkm: r.km,
                     sid: r.al,
@@ -942,7 +1141,9 @@ pub async fn find_k(o: &str, d: &str, esc_o: bool, esc_d: bool, tf: &str) -> Res
                 if !check_req_id(my_id) {
                     break;
                 }
-                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] { continue; }
+                if next_r.tn.is_empty() || !tf_table[next_r.tn.as_bytes()[0] as usize] {
+                    continue;
+                }
                 let new_tkm = c.tkm + next_r.km;
                 pq.push(StK {
                     tkm: new_tkm,

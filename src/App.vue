@@ -268,10 +268,10 @@
                     <div style="display: flex; flex-wrap: wrap; gap: 8px">
                       <n-button v-for="(template, key) in allTemplates" :key="key" size="small"
                         @click="selectTemplate(key)" :disabled="!ready" :type="selectedTemplate === key
-                            ? 'primary'
-                            : template.type === 'user'
-                              ? 'default'
-                              : 'default'
+                          ? 'primary'
+                          : template.type === 'user'
+                            ? 'default'
+                            : 'default'
                           " style="
                           position: relative;
                           transition: all 0.2s;
@@ -333,8 +333,8 @@
                                     : '#666',
                             }">
                               <component :is="editingTemplate === key
-                                  ? CheckmarkOutline
-                                  : CreateOutline
+                                ? CheckmarkOutline
+                                : CreateOutline
                                 " :style="{
                                   color:
                                     selectedTemplate === key
@@ -386,7 +386,7 @@
           </n-card>
 
           <n-alert v-if="statusMessage && mode === 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
-            }}</n-alert>
+          }}</n-alert>
 
           <n-collapse-transition :show="mode === 'custom' && customResult !== null">
             <n-card style="margin-top: 16px">
@@ -415,7 +415,7 @@
           </n-collapse-transition>
 
           <n-alert v-if="statusMessage && mode !== 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
-            }}</n-alert>
+          }}</n-alert>
           <n-progress v-if="progressVisible" type="line" :percentage="progressPercent" :show-indicator="false"
             processing />
           <n-space v-if="journeys.length > 0" vertical :size="16">
@@ -424,10 +424,10 @@
               <n-space :size="12" style="margin-bottom: 20px"><n-tag
                   :type="journey.searchMode === 'km' ? 'info' : 'success'" round><template #icon><n-icon :component="journey.searchMode === 'km' ? Location : TimeOutline
                     " /></template>{{
-                        journey.searchMode === "km"
-                          ? `${journey.tkm} 公里`
-                          : formatDuration(journey.tdur)
-                      }}</n-tag><n-tag type="warning" round><template #icon><n-icon
+                      journey.searchMode === "km"
+                        ? `${journey.tkm} 公里`
+                        : formatDuration(journey.tdur)
+                    }}</n-tag><n-tag type="warning" round><template #icon><n-icon
                       :component="SwapHorizontalOutline" /></template>{{ calculateTransfers(journey) }} 次换乘</n-tag>
               </n-space>
               <n-timeline>
@@ -481,24 +481,31 @@
                   </div>
                   <div v-else-if="journey.allStops && journey.allStops.length > 0">
                     <div style="margin-bottom: 12px">
-                      <n-text depth="3" style="display: block; line-height: 1.6">
-                        <span v-for="(stop, index) in journey.allStops" :key="stop.n" style="
+                      <div style="display: block; line-height: 1.6">
+                        <span v-for="(stop, index) in journey.allStops" :key="index" style="
                             display: inline-flex;
                             align-items: center;
                             flex-wrap: wrap;
                           ">
-                          {{ stop.n }}
-                          <n-tag v-for="line in stop.rn" :key="line" size="tiny" type="success" :bordered="false" style="
+                          <n-text :depth="stop.st === false ? 3 : 1" :strong="stop.st !== false">
+                            {{ stop.n }}
+                          </n-text>
+
+
+                          <!-- 2. 线路标签 -->
+                          <n-tag v-for="line in getVisibleLines(journey.allStops, index)" :key="line" size="tiny"
+                            type="success" :bordered="false" style="
                               margin-left: 4px;
                               margin-right: 4px;
                               font-size: 10px;
                               padding: 1px 6px;
                             ">
                             {{ line }}
-                          </n-tag>
-                          <span v-if="index < journey.allStops.length - 1" style="margin: 0 4px">→</span>
+                          </n-tag><!-- 2. 线路标签 -->
+
+                          <n-text depth="3" v-if="index < journey.allStops.length - 1" style="margin: 0 4px">→</n-text>
                         </span>
-                      </n-text>
+                      </div>
                     </div>
                     <MapRenderer :stops="journey.allStops" />
                   </div>
@@ -905,6 +912,25 @@ const statusType = computed(() => {
   return "default";
 });
 
+const getTrainDetails = (trainNumber) => {
+  const requestId = Date.now() + Math.random();
+  const promise = new Promise((resolve, reject) => {
+    gtsPromiseMap.set(requestId, { resolve, reject });
+    setTimeout(() => {
+      if (gtsPromiseMap.has(requestId)) {
+        gtsPromiseMap.delete(requestId);
+        reject(new Error("TLE"));
+      }
+    }, 10000);
+  });
+  w.postMessage({
+    t: "gfd",
+    requestId,
+    d: { n: trainNumber },
+  });
+  return promise;
+};
+
 const getStationOptions = (inputValue) => {
   const input = inputValue.trim();
   if (!input) return [];
@@ -1091,7 +1117,7 @@ const getTrainStops = (trainNumber, departureTime, arrivalTime) => {
     setTimeout(() => {
       if (gtsPromiseMap.has(requestId)) {
         gtsPromiseMap.delete(requestId);
-        reject(new Error("请求超时"));
+        reject(new Error("TLE"));
       }
     }, 10000);
   });
@@ -1102,6 +1128,7 @@ const getTrainStops = (trainNumber, departureTime, arrivalTime) => {
   });
   return promise;
 };
+
 const handleExpandJourney = async (journey) => {
   if (journey.allStops || journey.stationsLoading) return;
   const rawJourney = rawJourneyBuffer.get(journey.id);
@@ -1111,37 +1138,74 @@ const handleExpandJourney = async (journey) => {
   }
   journey.stationsLoading = true;
   journey.stationsError = null;
+
   try {
-    const allStopsArrays = [];
-    let currentTime = rawJourney.idt;
+    const allSegments = [];
+
     for (let i = 0; i < rawJourney.p.length; i++) {
       const leg = rawJourney.p[i];
-      currentTime += leg.wtb;
-      const departureTime = leg.r.dtr;
-      const arrivalTime = leg.r.dtr + leg.r.dur;
-      const stops = await getTrainStops(leg.r.tn, departureTime, arrivalTime);
-      allStopsArrays.push(stops);
-      currentTime = arrivalTime;
+      let segmentStops = [];
+      let usedGts = false;
+
+      try {
+        const fullRoute = await getTrainDetails(leg.r.tn);
+        const fromName = leg.r.bs;
+        const toName = leg.r.al;
+        const startIdx = fullRoute.findIndex(s => s.n === fromName);
+        let endIdx = -1;
+        if (startIdx !== -1) {
+          endIdx = fullRoute.findIndex((s, idx) => idx > startIdx && s.n === toName);
+        }
+
+        if (startIdx !== -1 && endIdx !== -1) {
+          segmentStops = fullRoute.slice(startIdx, endIdx + 1);
+        } else {
+          throw new Error("切片失败");
+        }
+
+      } catch (err) {
+        console.warn(`GFD 失败 (${leg.r.tn}), 回退 GTS`);
+        usedGts = true;
+        const stops = await getTrainStops(leg.r.tn, leg.r.dtr, leg.r.dtr + leg.r.dur);
+        segmentStops = stops.map(s => ({ ...s, st: true, ln: "" }));
+      }
+
+      segmentStops.forEach(s => s.isGts = usedGts);
+
+      if (i > 0 && allSegments.length > 0 && segmentStops.length > 0) {
+        const prevEnd = allSegments[allSegments.length - 1];
+        const currStart = segmentStops[0];
+
+        if (prevEnd.n === currStart.n) {
+
+          if (prevEnd.isGts || currStart.isGts) {
+            const mergedRn = [...(prevEnd.rn || []), ...(currStart.rn || [])];
+            prevEnd.rn = [...new Set(mergedRn)];
+            prevEnd.isGts = true;
+          } else {
+            const lineIn = (prevEnd.rn && prevEnd.rn.length > 0) ? prevEnd.rn[0] : null;
+            const lineOut = (currStart.rn && currStart.rn.length > 0) ? currStart.rn[currStart.rn.length - 1] : null;
+
+            const newRn = [];
+            if (lineIn) newRn.push(lineIn);
+            if (lineOut && lineOut !== lineIn) newRn.push(lineOut);
+
+            prevEnd.rn = newRn;
+          }
+
+          if (currStart.st) prevEnd.st = true;
+
+          segmentStops.shift();
+        }
+      }
+
+      allSegments.push(...segmentStops);
     }
 
-    if (allStopsArrays.length > 0) {
-      const finalRouteStops = allStopsArrays.reduce(
-        (accumulator, currentStops, index) => {
-          if (index === 0) {
-            return currentStops;
-          } else {
-            return accumulator.concat(currentStops.slice(1));
-          }
-        },
-        []
-      );
-      journey.allStops = finalRouteStops;
-    } else {
-      journey.allStops = [];
-    }
+    journey.allStops = allSegments;
   } catch (e) {
     console.error(e);
-    journey.stationsError = e.message;
+    journey.stationsError = "获取站点数据失败";
   } finally {
     journey.stationsLoading = false;
   }
@@ -1649,6 +1713,29 @@ const saveTemplateEdit = (key) => {
 
 const refreshTemplates = () => {
   allTemplates.value = getAllTemplates();
+};
+
+const getVisibleLines = (allStops, index) => {
+  const stop = allStops[index];
+  const currentLines = stop.rn || [];
+
+  if (index === 0) {
+    if (stop.isGts) return currentLines;
+
+    if (currentLines.length > 0) {
+      return [currentLines[currentLines.length - 1]];
+    }
+    return currentLines;
+  }
+
+  const prevLines = allStops[index - 1].rn || [];
+  const lastPrevLine = prevLines[prevLines.length - 1];
+
+  if (currentLines.length === 1 && currentLines[0] === lastPrevLine) {
+    return [];
+  }
+
+  return currentLines;
 };
 
 refreshTemplates();
