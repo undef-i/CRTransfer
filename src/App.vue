@@ -492,7 +492,6 @@
                           </n-text>
 
 
-                          <!-- 2. 线路标签 -->
                           <n-tag v-for="line in getVisibleLines(journey.allStops, index)" :key="line" size="tiny"
                             type="success" :bordered="false" style="
                               margin-left: 4px;
@@ -501,7 +500,7 @@
                               padding: 1px 6px;
                             ">
                             {{ line }}
-                          </n-tag><!-- 2. 线路标签 -->
+                          </n-tag>
 
                           <n-text depth="3" v-if="index < journey.allStops.length - 1" style="margin: 0 4px">→</n-text>
                         </span>

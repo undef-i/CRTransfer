@@ -5,6 +5,9 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   sync-data:
     runs-on: ubuntu-latest
@@ -27,11 +30,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y wget jq
-        LATEST_VERSION=$(curl -s https://api.github.com/repos/WebAssembly/binaryen/releases/latest | jq -r '.tag_name')
-        echo "Installing binaryen $LATEST_VERSION"
-        wget https://github.com/WebAssembly/binaryen/releases/download/${LATEST_VERSION}/binaryen-${LATEST_VERSION}-x86_64-linux.tar.gz
-        tar -xzf binaryen-${LATEST_VERSION}-x86_64-linux.tar.gz
-        sudo mv binaryen-${LATEST_VERSION}/bin/wasm-opt /usr/local/bin/
+        wget https://github.com/WebAssembly/binaryen/releases/download/version_125/binaryen-version_125-x86_64-linux.tar.gz
+        tar -xzf binaryen-version_125-x86_64-linux.tar.gz
+        sudo mv binaryen-version_125/bin/wasm-opt /usr/local/bin/
         sudo chmod +x /usr/local/bin/wasm-opt
     - name: Check tool versions
       run: |
@@ -73,7 +74,7 @@ jobs:
         NEW_VERSION=$(echo "$NEW_VERSION" | tr -d '\n' | xargs)
         
         FILES_GENERATED=false
-        if [ -f "rdat.json" ] || [ -f "scdat.json" ] || [ -f "ndt.json" ]; then
+        if [ -f "rdat.json" ] || [ -f "scdat.json" ] || [ -f "ndt.json" ] || [ -f "rts.json" ]; then
           FILES_GENERATED=true
         fi
         
@@ -95,7 +96,7 @@ jobs:
         echo "files_generated=$FILES_GENERATED" >> $GITHUB_OUTPUT
         
         if [ "$SHOULD_UPDATE" != "true" ]; then
-          rm -f rdat.json scdat.json ndt.json
+          rm -f rdat.json scdat.json ndt.json rts.json
         fi
 
     - name: Update data files
@@ -113,6 +114,10 @@ jobs:
           cp src/sync/ndt.json data/ndt.json
         fi
         
+        if [ -f "src/sync/rts.json" ]; then
+          cp src/sync/rts.json data/rts.json
+        fi
+
         echo "${{ steps.sync.outputs.new_version }}" > data/version
         
     - name: Install Node.js dependencies
@@ -126,10 +131,10 @@ jobs:
     - name: Commit and push changes
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
         
-        git add data/rdat.json data/scdat.json data/ndt.json data/version
+        git add data/rdat.json data/scdat.json data/ndt.json data/rts.json data/version
         git add dist/
         
         if git diff --staged --quiet; then
@@ -142,4 +147,4 @@ jobs:
     - name: Cleanup
       if: always()
       run: |
-        rm -f src/sync/rdat.json src/sync/scdat.json src/sync/ndt.json || true
+        rm -f src/sync/rdat.json src/sync/scdat.json src/sync/ndt.json src/sync/rts.json|| true
