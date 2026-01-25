@@ -1201,6 +1201,13 @@ const handleExpandJourney = async (journey) => {
       allSegments.push(...segmentStops);
     }
 
+    if (allSegments.length > 0) {
+      const lastStop = allSegments[allSegments.length - 1];
+      if (!lastStop.isGts && lastStop.rn && lastStop.rn.length > 0) {
+        lastStop.rn = [lastStop.rn[0]];
+      }
+    }
+
     journey.allStops = allSegments;
   } catch (e) {
     console.error(e);

@@ -217,23 +217,29 @@ const initializeMap = (element) => {
       });
     }
 
+    const sortedFeatures = validStops
+      .map((s) => ({
+        type: "Feature",
+        properties: {
+          name: s.n,
+          lines: s.rn || [],
+          isStop: s.st,
+          lineName: s.ln
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [s.lon, s.lat],
+        },
+      }))
+      .sort((a, b) => {
+        return Number(a.properties.isStop) - Number(b.properties.isStop);
+      });
+
     mapInstance.addSource("stations", {
       type: "geojson",
       data: {
         type: "FeatureCollection",
-        features: validStops.map((s) => ({
-          type: "Feature",
-          properties: {
-            name: s.n,
-            lines: s.rn || [],
-            isStop: s.st,
-            lineName: s.ln
-          },
-          geometry: {
-            type: "Point",
-            coordinates: [s.lon, s.lat],
-          },
-        })),
+        features: sortedFeatures,
       },
     });
     mapInstance.addLayer({
