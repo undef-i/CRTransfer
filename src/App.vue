@@ -1074,6 +1074,9 @@ const processJourney = (journey) => {
   if (!raw || !raw.p) return [];
   const segments = [];
   let currentTime = raw.idt;
+
+  const startDayOffset = Math.floor(raw.idt / 1440) * 1440;
+
   for (let i = 0; i < raw.p.length; i++) {
     const leg = raw.p[i];
     if (leg.wtb > 0 && i > 0 && leg.r.tn !== raw.p[i - 1].r.tn) {
@@ -1087,7 +1090,7 @@ const processJourney = (journey) => {
       });
     }
     currentTime += leg.wtb;
-    const departureTime = formatArrivalTime(currentTime);
+    const departureTime = formatArrivalTime(currentTime - startDayOffset);
 
     const finalArrivalTime = currentTime + leg.r.dur;
     const finalStation = leg.r.al;
@@ -1101,7 +1104,9 @@ const processJourney = (journey) => {
       details:
         journey.searchMode === "km"
           ? `${totalKm}公里`
-          : `${departureTime} → ${formatArrivalTime(finalArrivalTime)}`,
+          : `${departureTime} → ${formatArrivalTime(
+            finalArrivalTime - startDayOffset
+          )}`,
       color: "#2ea043",
       isNonDaily: nonDailyTrains.includes(leg.r.tn),
     });
