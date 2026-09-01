@@ -4,7 +4,7 @@
 
 ## 使用
 
-访问 https://crtransfer.noxylva.org/ 
+访问 https://crtransfer.nedifinita.com/ 
 
 
 ## 构建
@@ -17,7 +17,7 @@ npm run build
 ## 贡献
 
 [data/sl.json](data/sl.json) 中的站点位置和线路信息目前通过手工维护，基于 WGS-84 坐标系。
-如果您发现任何站点位置或线路信息的错误，可以通过 Pull Request 提交贡献，也可以在 [CRData](http://data.crtransfer.noxylva.org/) 平台提交数据。
+如果您发现任何站点位置或线路信息的错误，可以通过 Pull Request 提交贡献，也可以在 [CRData](http://data.crtransfer.nedifinita.com/) 平台提交数据。
 
 ## 已知问题
 
