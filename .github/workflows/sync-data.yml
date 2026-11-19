@@ -18,40 +18,6 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Set up Rust toolchain
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: nightly-2025-08-16
-        targets: wasm32-unknown-unknown
-
-    - name: Install wasm-pack
-      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-    - name: Install latest binaryen
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget jq
-        wget https://github.com/WebAssembly/binaryen/releases/download/version_125/binaryen-version_125-x86_64-linux.tar.gz
-        tar -xzf binaryen-version_125-x86_64-linux.tar.gz
-        sudo mv binaryen-version_125/bin/wasm-opt /usr/local/bin/
-        sudo chmod +x /usr/local/bin/wasm-opt
-    - name: Check tool versions
-      run: |
-        rustc --version
-        wasm-pack --version
-        wasm-opt --version
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install dependencies
-      run: |
-        cd src/sync
-        if [ -f package.json ]; then
-          npm install
-        fi
-
     - name: Set executable permission
       run: |
         chmod +x src/sync/sync
@@ -120,14 +86,6 @@ jobs:
 
         echo "${{ steps.sync.outputs.new_version }}" > data/version
         
-    - name: Install Node.js dependencies
-      if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
-      run: npm install
-
-    - name: Build project
-      if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
-      run: npm run build
-        
     - name: Commit and push changes
       if: steps.sync.outputs.should_update == 'true' && steps.sync.outputs.files_generated == 'true'
       run: |
@@ -135,7 +93,6 @@ jobs:
         git config --local user.name "github-actions[bot]"
         
         git add data/rdat.json data/scdat.json data/ndt.json data/rts.json data/version
-        git add dist/
         
         if git diff --staged --quiet; then
           echo "No changes to commit"

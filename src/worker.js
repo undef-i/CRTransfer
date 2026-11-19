@@ -1,166 +1,153 @@
-let wm;
-let init_done = false;
+import { createEngine } from "./engine.js";
 
-async function init_w() {
-    if (init_done) return true;
-    try {
-        if (!wm) {
-            self.postMessage({ t: "pgr_start" });
+let engine = null;
+let sl = null;
+let rdatMap = null;
+let routeMap = null;
+let lineMap = null;
+let initPromise = null;
+let dataResolve = null;
+const dataReady = new Promise((resolve) => {
+  dataResolve = resolve;
+});
 
-            const resp = await fetch(
-                new URL("./wasm/pkg/transit_bg.wasm", import.meta.url),
-                {
-                    headers: {
-                        "Accept-Encoding": "br, gzip, deflate",
-                    },
-                }
-            );
-            if (!resp.ok) throw new Error(`WASM fetch failed: ${resp.statusText}`);
-
-            const tot = +resp.headers.get("Content-Length");
-            const rdr = resp.body.getReader();
-
-            let ld = 0;
-            const cks = [];
-
-            while (true) {
-                const { done, value } = await rdr.read();
-                if (done) break;
-                cks.push(value);
-                ld += value.length;
-                if (tot) {
-                    self.postMessage({ t: "pgr_upd", d: { ld, tt: tot } });
-                }
-            }
-
-            const wbuf = new Uint8Array(ld);
-            let pos = 0;
-            for (const ck of cks) {
-                wbuf.set(ck, pos);
-                pos += ck.length;
-            }
-
-            const wimp = await import(
-                /* @vite-ignore */
-                new URL("./wasm/pkg/transit.js", import.meta.url)
-            );
-            await wimp.default(wbuf.buffer);
-            wm = wimp;
-            console.log("w module loaded");
-            wm.init();
-            init_done = true;
-            console.log("w data initialized");
-        }
-        return true;
-    } catch (err) {
-        console.error("w init fail:", err);
-        self.postMessage({ t: "err", d: "w init fail: " + err.toString() });
-        return false;
-    }
+function init() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      self.postMessage({ t: "pgr_start" });
+      const { rdat, scdat, sl: slData, rts } = await dataReady;
+      sl = slData;
+      engine = createEngine(rdat, scdat);
+      rdatMap = new Map();
+      for (const t of rdat.t) rdatMap.set(t.tn, t);
+      routeMap = new Map();
+      for (const r of rts.r) routeMap.set(r.c, r);
+      lineMap = new Map();
+      for (const l of rts.l) lineMap.set(l.i, l);
+      return true;
+    })();
+  }
+  return initPromise;
 }
 
-self.on_jny = function (jstr) {
-    try {
-        self.postMessage({ t: "j_fnd", d: JSON.parse(jstr) });
-    } catch (err) {
-        console.error("j parse err:", err);
+function gts(tn, dtr, atr) {
+  const rt = rdatMap.get(tn);
+  if (!rt) throw new Error(`Train '${tn}' not found`);
+  const startIdx = rt.s.findIndex((s) => s.d === dtr);
+  if (startIdx === -1)
+    throw new Error(`Start point with dtr '${dtr}' not found`);
+  const relIdx = rt.s.slice(startIdx).findIndex((s) => s.a === atr);
+  if (relIdx === -1)
+    throw new Error(
+      `End point with atr '${atr}' not found after start point with dtr '${dtr}'`
+    );
+  return rt.s.slice(startIdx, startIdx + relIdx + 1).map((s) => {
+    const loc = sl[s.n] || {};
+    return {
+      n: s.n,
+      lat: loc.lat ?? 0,
+      lon: loc.lon ?? 0,
+      rn: loc.rn ?? [],
+    };
+  });
+}
+
+function gfd(tn) {
+  const train = rdatMap.get(tn);
+  if (!train) throw new Error("tn!fnd");
+  const stopsMap = new Map();
+  for (const s of train.s) stopsMap.set(s.n, s);
+  const route = routeMap.get(tn);
+  if (!route) throw new Error("no_route_data");
+  const fullPath = [];
+  let lastName = "";
+  for (let i = 0; i < route.s.length; i++) {
+    const node = route.s[i];
+    const line = lineMap.get(node.l);
+    if (!line) continue;
+    const to = i < route.s.length - 1 ? route.s[i + 1].n : route.e;
+    const idxA = line.s.findIndex((s) => s.n === node.n);
+    const idxB = line.s.findIndex((s) => s.n === to);
+    if (idxA === -1 || idxB === -1) continue;
+    const seg =
+      idxA <= idxB
+        ? line.s.slice(idxA, idxB + 1)
+        : line.s.slice(idxB, idxA + 1).reverse();
+    for (const st of seg) {
+      if (st.n === lastName) {
+        const last = fullPath[fullPath.length - 1];
+        if (last && !last.rn.includes(line.n)) {
+          last.ln = `${last.ln}/${line.n}`;
+          last.rn.push(line.n);
+        }
+        continue;
+      }
+      const sched = stopsMap.get(st.n);
+      const loc = sl[st.n] || {};
+      fullPath.push({
+        n: st.n,
+        lat: loc.lat ?? 0,
+        lon: loc.lon ?? 0,
+        rn: [line.n],
+        st: !!sched,
+        a: sched ? sched.a : -1,
+        d: sched ? sched.d : -1,
+        ln: line.n,
+      });
+      lastName = st.n;
     }
-};
+  }
+  return fullPath;
+}
 
-self.onmessage = async function (e) {
-    const { t, o, d, mtt, esc_o, esc_d, tf, requestId } = e.data;
-
-    try {
-        if (t === "stop") {
-            if (wm) wm.stop();
-            return;
-        }
-
-        if (!init_done && !(await init_w())) {
-            return;
-        }
-
-        while (!wm) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
-        if (t === "start") {
-            self.postMessage({ t: "stat", d: "..." });
-            await wm.find(o, d, mtt, esc_o, esc_d, tf || "");
-            self.postMessage({ t: "done" });
-        } else if (t === "start_mx") {
-            self.postMessage({ t: "stat", d: "..." });
-            await wm.find_mx(o, d, mtt, esc_o, esc_d, tf || "");
-            self.postMessage({ t: "done" });
-        } else if (t === "start_k") {
-            self.postMessage({ t: "stat", d: "..." });
-            await wm.find_k(o, d, esc_o, esc_d, tf || "");
-            self.postMessage({ t: "done" });
-        } else if (t === "init_only") {
-            self.postMessage({ t: "init_done" });
-        } else if (t === "get_stn") {
-            const stns = wm.g_stns();
-            self.postMessage({ t: "stn", d: stns });
-        } else if (t === "gts") {
-            try {
-                const stopsJson = wm.gts(d.n, d.dtr, d.atr);
-                const stops = JSON.parse(stopsJson);
-                self.postMessage({ t: "ts", d: stops, requestId: requestId });
-            } catch (err) {
-                console.error("gts err:", err);
-                self.postMessage({
-                    t: "err",
-                    d: err.toString() || "gts unk err",
-                    requestId: requestId,
-                });
-            }
-        } else if (t === "gfd") {
-            try {
-                const res = wm.gfd(d.n);
-                self.postMessage({
-                    t: "qr",
-                    d: JSON.parse(res),
-                    requestId: requestId,
-                });
-            } catch (err) {
-                console.error("gfd err:", err);
-                self.postMessage({
-                    t: "qry_err",
-                    d: err.toString() || "gfd unk err",
-                    requestId: requestId,
-                });
-            }
-        } else if (t === "qry") {
-            try {
-                let r;
-                if (d.t === "rdat") {
-                    r = wm.qry_rdat(d.k);
-                } else if (d.t === "scdat") {
-                    r = wm.qry_scdat(d.k);
-                } else if (d.t === "rts") {
-                    r = wm.qrr();
-                }
-                self.postMessage({
-                    t: "qr",
-                    d: r ? JSON.parse(r) : null,
-                    requestId: requestId,
-                });
-            } catch (err) {
-                console.error("qry err:", err);
-                self.postMessage({
-                    t: "err",
-                    d: err.toString() || "qry unk err",
-                    requestId: requestId,
-                });
-            }
-        }
-    } catch (err) {
-        console.error("err in worker:", err);
-        self.postMessage({ t: "err", d: err.toString() || "unk err" });
+self.onmessage = async (e) => {
+  const { t, o, d, mtt, esc_o, esc_d, tf, requestId } = e.data;
+  if (t === "data") {
+    dataResolve(d);
+    return;
+  }
+  try {
+    if (t === "stop") {
+      if (engine) engine.stop();
+      return;
     }
-};
-
-self.onerror = function (err) {
-    console.error("w err:", err);
-    self.postMessage({ t: "err", d: "w err: " + err.message });
+    await init();
+    if (t === "init_only") {
+      self.postMessage({ t: "init_done" });
+    } else if (t === "get_stn") {
+      self.postMessage({ t: "stn", d: engine.i2s });
+    } else if (t === "get_types") {
+      self.postMessage({ t: "types", d: engine.types() });
+    } else if (t === "start" || t === "start_mx" || t === "start_k") {
+      const cb = (j) => self.postMessage({ t: "j_fnd", d: j });
+      if (t === "start") await engine.find(o, d, mtt, esc_o, esc_d, tf || "", cb);
+      else if (t === "start_mx")
+        await engine.findMx(o, d, mtt, esc_o, esc_d, tf || "", cb);
+      else await engine.findK(o, d, esc_o, esc_d, tf || "", cb);
+      self.postMessage({ t: "done" });
+    } else if (t === "gts") {
+      try {
+        self.postMessage({ t: "ts", d: gts(d.n, d.dtr, d.atr), requestId });
+      } catch (err) {
+        self.postMessage({
+          t: "gts_err",
+          d: String((err && err.message) || err),
+          requestId,
+        });
+      }
+    } else if (t === "gfd") {
+      try {
+        self.postMessage({ t: "qr", d: gfd(d.n), requestId });
+      } catch (err) {
+        self.postMessage({
+          t: "qry_err",
+          d: String((err && err.message) || err),
+          requestId,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("worker err:", err);
+    self.postMessage({ t: "err", d: String((err && err.message) || err) });
+  }
 };

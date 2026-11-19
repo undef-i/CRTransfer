@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node build.js && vite",
-    "build": "node build.js",
+    "dev": "vite",
+    "build": "vite build --mode production",
     "preview": "vite preview",
-    "wasm": "cd src/wasm && wasm-pack build --target web --release",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

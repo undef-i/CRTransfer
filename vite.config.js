@@ -13,7 +13,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'src/index.html'),
-        vanilla: resolve(__dirname, 'src/vanilla/index.html'),
       },
       output: {
         format: 'es',
@@ -32,11 +31,5 @@ export default defineConfig({
         format: 'es'
       }
     }
-  },
-  assetsInclude: ['**/*.wasm'],
-  resolve: {
-    alias: {
-      './wasm/pkg': resolve(__dirname, 'src/wasm/pkg'),
-    },
   },
 });

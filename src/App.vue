@@ -7,13 +7,10 @@
             <n-space justify="space-between" align="center">
               <n-space align="center" :size="12">
                 <n-h1 style="margin: 0; font-size: 20px; font-weight: 600">铁路换乘查询</n-h1>
-                <n-text depth="3" style="font-size: 10px">
-                  <a href="/vanilla/" target="_blank" style="color: #2ea043; text-decoration: none">旧版</a>
-                </n-text>
               </n-space>
               <n-space align="center" :size="16">
                 <n-text depth="3" style="font-size: 12px">
-                  © 2025 noxylva.
+                  © 2026 nedifinita.
                   <a href="https://github.com/undef-i/CRTransfer" target="_blank"
                     style="color: #2ea043; text-decoration: none">GitHub</a>
                 </n-text>
@@ -41,9 +38,6 @@
                 </n-icon>
                 <n-h1 style="margin: 0; font-size: 18px; font-weight: 600">铁路换乘查询</n-h1>
               </n-space>
-              <n-text depth="3" style="font-size: 10px">
-                <a href="/vanilla/" target="_blank" style="color: #2ea043; text-decoration: none">旧版</a>
-              </n-text>
             </div>
             <div style="
                 display: flex;
@@ -51,7 +45,7 @@
                 align-items: center;
               ">
               <n-text depth="3" style="font-size: 12px">
-                © 2025 noxylva.
+                © 2026 nedifinita.
                 <a href="https://github.com/undef-i/CRTransfer" target="_blank"
                   style="color: #2ea043; text-decoration: none">GitHub</a>
               </n-text>
@@ -108,42 +102,12 @@
               </n-button-group>
 
               <n-collapse-transition :show="mode !== 'custom'">
-                <n-button-group class="full-width-responsive-group" style="margin-bottom: 12px">
-                  <n-button size="small" :type="trainFilter.includes('G') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('G')" @click="toggleTrainFilter('G')">
-                    G
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('D') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('D')" @click="toggleTrainFilter('D')">
-                    D
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('C') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('C')" @click="toggleTrainFilter('C')">
-                    C
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('K') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('K')" @click="toggleTrainFilter('K')">
-                    K
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('T') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('T')" @click="toggleTrainFilter('T')">
-                    T
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('Z') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('Z')" @click="toggleTrainFilter('Z')">
-                    Z
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('Y') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('Y')" @click="toggleTrainFilter('Y')">
-                    Y
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('S') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('S')" @click="toggleTrainFilter('S')">
-                    S
-                  </n-button>
-                  <n-button size="small" :type="trainFilter.includes('NUM') ? 'primary' : 'default'"
-                    :ghost="!trainFilter.includes('NUM')" @click="toggleTrainFilter('NUM')">
-                    普
+                <n-button-group ref="trainTypeGroupRef" class="full-width-responsive-group train-type-group"
+                  :style="{ '--th': trainTypeHeight + 'px', marginBottom: '12px' }">
+                  <n-button v-for="tp in trainTypes" :key="tp" size="small"
+                    :type="trainFilter.includes(tp) ? 'primary' : 'default'" :ghost="!trainFilter.includes(tp)"
+                    @click="toggleTrainFilter(tp)">
+                    {{ tp === '@' ? '普' : tp }}
                   </n-button>
                 </n-button-group>
 
@@ -174,93 +138,10 @@
               <n-collapse-transition :show="mode === 'custom'">
                 <n-space vertical :size="16">
                   <n-collapse arrow-placement="right">
-                    <n-collapse-item title="数据结构">
-                      <n-space vertical :size="8">
-                        <n-text strong style="font-size: 14px">接口 <n-text code>qry('rdat')</n-text></n-text>
-                        <n-text style="font-size: 13px; line-height: 1.3">返回: <n-text code>Array&lt;Train&gt;</n-text> -
-                          列车对象的数组。</n-text>
-                        <n-space vertical :size="2" style="margin-left: 12px">
-                          <n-text style="font-size: 13px; line-height: 1.3">
-                            <n-text code>Train</n-text> 对象:
-                          </n-text>
-                          <n-space vertical :size="1" style="margin-left: 24px">
-                            <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>tn</n-text>:
-                              <n-text code>String</n-text> - 车次号。
-                            </n-text>
-                            <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>r</n-text>:
-                              <n-text code>Integer</n-text> - 运行周期总天数。
-                            </n-text>
-                            <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>p</n-text>:
-                              <n-text code>Integer</n-text> - 开行位掩码
-                              (其二进制从低位至高位的每一位对应周期内一天的开行状态)。
-                            </n-text>
-                            <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>s</n-text>:
-                              <n-text code>Array&lt;Station&gt;</n-text> -
-                              经停站对象数组。
-                            </n-text>
-                            <n-space vertical :size="1" style="margin-left: 36px">
-                              <n-text style="font-size: 13px; line-height: 1.3">
-                                <n-text code>Station</n-text> 对象:
-                              </n-text>
-                              <n-space vertical :size="1" style="margin-left: 48px">
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>id</n-text>:
-                                  <n-text code>Integer</n-text> - 车站 ID。
-                                </n-text>
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>n</n-text>:
-                                  <n-text code>String</n-text> - 站名。
-                                </n-text>
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>a</n-text> /
-                                  <n-text code>d</n-text>:
-                                  <n-text code>Integer</n-text> - 到达/出发时间
-                                  (从始发日00:00起计的总分钟数)。
-                                </n-text>
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>km</n-text>:
-                                  <n-text code>Integer</n-text> - 累计里程
-                                  (公里)。
-                                </n-text>
-                              </n-space>
-                            </n-space>
-                          </n-space>
-                        </n-space>
-
-                        <n-divider style="margin: 8px 0" />
-
-                        <n-text strong style="font-size: 14px">接口 <n-text code>qry('scdat')</n-text></n-text>
-                        <n-text style="font-size: 13px; line-height: 1.3">返回:
-                          <n-text code>{ g: Array&lt;Group&gt; }</n-text> -
-                          包含分组列表的对象。</n-text>
-                        <n-space vertical :size="2" style="margin-left: 12px">
-                          <n-text style="font-size: 13px; line-height: 1.3">
-                            <n-text code>Group</n-text> 对象:
-                          </n-text>
-                          <n-space vertical :size="1" style="margin-left: 24px">
-                            <n-text style="font-size: 13px; line-height: 1.3">
-                              • <n-text code>s</n-text>:
-                              <n-text code>Array&lt;StationSimple&gt;</n-text> -
-                              同组车站对象数组。
-                            </n-text>
-                            <n-space vertical :size="1" style="margin-left: 36px">
-                              <n-text style="font-size: 13px; line-height: 1.3">
-                                <n-text code>StationSimple</n-text> 对象:
-                              </n-text>
-                              <n-space vertical :size="1" style="margin-left: 48px">
-                                <n-text style="font-size: 13px; line-height: 1.3">
-                                  - <n-text code>n</n-text>:
-                                  <n-text code>String</n-text> - 站名。
-                                </n-text>
-                              </n-space>
-                            </n-space>
-                          </n-space>
-                        </n-space>
-                      </n-space>
+                    <n-collapse-item title="Prompt">
+                      <n-input :value="llmPrompt" type="textarea" readonly :rows="8" @click="copyPrompt"
+                        :input-props="{ spellcheck: false }"
+                        style="font-family: Consolas, Monaco, monospace; font-size: 12px; cursor: pointer" />
                     </n-collapse-item>
                   </n-collapse>
 
@@ -361,6 +242,7 @@
                     <n-input v-model:value="customCode" type="textarea" placeholder="" :rows="10"
                       :input-props="{ spellcheck: false }" font-family="Consolas, Monaco, monospace" />
                   </n-space>
+
                 </n-space>
               </n-collapse-transition>
 
@@ -385,7 +267,7 @@
             </n-space>
           </n-card>
 
-          <n-alert v-if="statusMessage && mode === 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
+          <n-alert v-show="statusMessage && mode === 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
           }}</n-alert>
 
           <n-collapse-transition :show="mode === 'custom' && customResult !== null">
@@ -409,14 +291,17 @@
                 <canvas ref="chartCanvas" style="width: 100%; height: 100%"></canvas>
               </div>
 
-              <n-code v-else :code="JSON.stringify(customResult, null, 2)" language="json" word-wrap
-                style="max-height: 400px; overflow-y: auto" />
+              <div v-else-if="typeof customResult === 'string'" v-html="customResult"
+                style="max-height: 400px; overflow-y: auto"></div>
+
+              <div v-else
+                style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-family: monospace; font-size: 12px">{{ JSON.stringify(customResult, null, 2) }}</div>
             </n-card>
           </n-collapse-transition>
 
           <n-alert v-if="statusMessage && mode !== 'custom'" :type="statusType" :show-icon="true">{{ statusMessage
           }}</n-alert>
-          <n-progress v-if="progressVisible" type="line" :percentage="progressPercent" :show-indicator="false"
+          <n-progress v-if="progressVisible" type="line" :show-indicator="false"
             processing />
           <n-space v-if="journeys.length > 0" vertical :size="16">
             <n-card v-for="(journey, index) in displayedJourneys" :key="journey.id" hoverable style="box-shadow: none"
@@ -566,7 +451,6 @@ import {
   NInputGroup,
   NInputGroupLabel,
   NInput,
-  NCode,
 } from "naive-ui";
 import {
   TrainOutline,
@@ -850,10 +734,28 @@ const escOrigin = ref(false);
 const escDestination = ref(false);
 const mode = ref("time");
 const trainFilter = ref([]);
+const trainTypes = ref([]);
+const trainTypeGroupRef = ref(null);
+const trainTypeBoxWidth = ref(0);
+let trainTypeObserver = null;
+const trainTypeHeight = computed(() => {
+  const n = trainTypes.value.length;
+  const w = trainTypeBoxWidth.value;
+  if (!n || !w) return 28;
+  return Math.min(28, Math.floor(w / n));
+});
+watch(trainTypeGroupRef, (inst) => {
+  if (trainTypeObserver) trainTypeObserver.disconnect();
+  const el = inst instanceof Element ? inst : inst?.$el;
+  if (el) {
+    trainTypeObserver = new ResizeObserver((entries) => {
+      trainTypeBoxWidth.value = entries[0].contentRect.width;
+    });
+    trainTypeObserver.observe(el);
+  }
+});
 const mtt = ref();
 const progressVisible = ref(false);
-const progressValue = ref(0);
-const progressMax = ref(0);
 const running = ref(false);
 const ready = ref(false);
 const stopReason = ref(null);
@@ -863,6 +765,7 @@ const journeys = ref([]);
 const displayCount = ref(0);
 const scrollObserver = ref(null);
 let w = null;
+let sharedData = null;
 const stationNames = ref([]);
 let nonDailyTrains = [];
 const BATCH_SIZE = 20;
@@ -896,20 +799,11 @@ watch(customCode, (newCode) => {
 const primaryButtonIcon = computed(() =>
   running.value ? StopCircleOutline : SearchOutline
 );
-const progressPercent = computed(() =>
-  progressMax.value > 0
-    ? Math.round((progressValue.value / progressMax.value) * 100)
-    : 0
-);
-const statusType = computed(() => {
-  const msg = statusMessage.value;
-  if (msg.includes("错误") || msg.includes("无方案")) return "error";
-  if (msg.includes("共") || msg.includes("查询到")) return "success";
-  if (running.value || msg.includes("加载") || msg.includes("初始化"))
-    return "info";
-  if (msg.includes("就绪") || msg.includes("查询条件更改")) return "info";
-  return "default";
-});
+const statusType = ref("info");
+const setStatus = (msg, type = "info") => {
+  statusMessage.value = msg;
+  statusType.value = type;
+};
 
 const getTrainDetails = (trainNumber) => {
   const requestId = Date.now() + Math.random();
@@ -1231,10 +1125,6 @@ const initWorker = () => {
       case "pgr_start":
         progressVisible.value = true;
         break;
-      case "pgr_upd":
-        progressValue.value = d.ld;
-        progressMax.value = d.tt;
-        break;
       case "j_fnd": {
         if (!running.value || stopReason.value !== null) return;
         const dataFromWorker = d;
@@ -1257,17 +1147,23 @@ const initWorker = () => {
         finishSearch();
         break;
       case "err":
-        statusMessage.value = `错误: ${d}`;
+        setStatus(`错误: ${d}`, "error");
         finishSearch();
         break;
       case "init_done":
         progressVisible.value = false;
         ready.value = true;
-        statusMessage.value = "就绪";
+        setStatus("就绪");
         w.postMessage({ t: "get_stn" });
+        w.postMessage({ t: "get_types" });
         break;
       case "stn":
         stationNames.value = d;
+        break;
+      case "types":
+        trainTypes.value = [...d].sort((a, b) =>
+          a === '@' ? 1 : b === '@' ? -1 : a < b ? -1 : 1
+        );
         break;
       case "ts":
         if (gtsPromiseMap.has(requestId)) {
@@ -1296,15 +1192,16 @@ const initWorker = () => {
     }
   };
   w.onerror = (err) => {
-    statusMessage.value = `Worker 错误: ${err.message}`;
+    setStatus(`Worker 错误: ${err.message}`, "error");
     finishSearch();
   };
+  if (sharedData) w.postMessage({ t: "data", d: sharedData });
   w.postMessage({ t: "init_only" });
 };
 const startSearch = () => {
   if (running.value || !ready.value) return;
   running.value = true;
-  statusMessage.value = "正在查询，请稍候...";
+  setStatus("正在查询，请稍候...");
   journeys.value = [];
   rawJourneyBuffer.clear();
   journeyResultBuffer = [];
@@ -1323,11 +1220,11 @@ const startSearch = () => {
       journeys.value.push(...journeyResultBuffer);
       journeyResultBuffer = [];
       if (running.value) {
-        statusMessage.value = `查询到 ${journeys.value.length} 条方案...`;
+        setStatus(`查询到 ${journeys.value.length} 条方案...`, "success");
       }
     }
   }, 250);
-  w.postMessage({
+  const query = {
     o: origin.value.trim(),
     d: destination.value.trim(),
     esc_o: escOrigin.value,
@@ -1339,8 +1236,9 @@ const startSearch = () => {
           ? "start_mx"
           : "start",
     mtt: parseInt(mtt.value) || 0,
-    tf: trainFilter.value.map((x) => (x === "NUM" ? "N" : x)).join(""),
-  });
+    tf: trainFilter.value.join(""),
+  };
+  w.postMessage(query);
 };
 const finishSearch = () => {
   if (!running.value) return;
@@ -1362,13 +1260,13 @@ const finishSearch = () => {
     case "interrupt":
       break;
     case "manual":
-      statusMessage.value = "查询已停止";
+      setStatus("查询已停止", "warning");
       break;
     default:
       if (journeys.value.length > 0) {
-        statusMessage.value = `查询完成，共找到 ${journeys.value.length} 条方案`;
+        setStatus(`查询完成，共找到 ${journeys.value.length} 条方案`, "success");
       } else {
-        statusMessage.value = "无方案";
+        setStatus("无方案", "error");
       }
       break;
   }
@@ -1389,6 +1287,12 @@ const stopSearch = (reason = "manual") => {
 };
 const handlePrimaryButtonClick = async () => {
   if (running.value) {
+    if (customRunning) {
+      stopCustomQuery();
+      running.value = false;
+      setStatus("查询已停止", "warning");
+      return;
+    }
     stopSearch("interrupt");
 
     if (bufferUpdateInterval) {
@@ -1427,133 +1331,75 @@ const loadMore = () => {
   );
 };
 
+let customWorker = null;
+let customResolve = null;
+let customRunning = false;
+
+const stopCustomQuery = () => {
+  if (customWorker) {
+    customWorker.terminate();
+    customWorker = null;
+  }
+  if (customResolve) {
+    const r = customResolve;
+    customResolve = null;
+    r(null);
+  }
+};
+
 const executeCustomQuery = async () => {
   if (!customCode.value.trim()) return;
 
   running.value = true;
-  statusMessage.value = "";
+  customRunning = true;
+  setStatus("");
   customResult.value = null;
 
-  try {
-    const createCancellableQueryAPI = () => {
-      let cancelled = false;
-
-      const checkCancelled = () => {
-        if (cancelled || !running.value) {
-          throw new Error("查询已取消");
-        }
-      };
-
-      return {
-        trains: async (key = "") => {
-          checkCancelled();
-          return new Promise((resolve, reject) => {
-            const requestId = Math.random().toString(36).substring(2, 9);
-            gtsPromiseMap.set(requestId, { resolve, reject });
-            w.postMessage({
-              t: "qry",
-              d: { t: "rdat", k: key },
-              requestId,
-            });
-
-            const interval = setInterval(() => {
-              if (cancelled || !running.value) {
-                clearInterval(interval);
-                if (gtsPromiseMap.has(requestId)) {
-                  gtsPromiseMap.delete(requestId);
-                  reject(new Error("查询已取消"));
-                }
-              }
-            }, 100);
-          });
-        },
-        stations: async (key = "") => {
-          checkCancelled();
-          return new Promise((resolve, reject) => {
-            const requestId = Math.random().toString(36).substring(2, 9);
-            gtsPromiseMap.set(requestId, { resolve, reject });
-            w.postMessage({
-              t: "qry",
-              d: { t: "scdat", k: key },
-              requestId,
-            });
-
-            const interval = setInterval(() => {
-              if (cancelled || !running.value) {
-                clearInterval(interval);
-                if (gtsPromiseMap.has(requestId)) {
-                  gtsPromiseMap.delete(requestId);
-                  reject(new Error("查询已取消"));
-                }
-              }
-            }, 100);
-          });
-        },
-        schedules: async (key = "") => {
-          checkCancelled();
-          return [];
-        },
-        qry: async (type, key = "") => {
-          checkCancelled();
-          switch (type) {
-            case "rdat":
-              return await queryAPI.trains(key);
-            case "scdat":
-              return await queryAPI.stations(key);
-            default:
-              return [];
-          }
-        },
-        cancel: () => {
-          cancelled = true;
-        },
-      };
+  if (!customWorker) {
+    customWorker = new Worker(new URL("./custom_worker.js", import.meta.url), {
+      type: "module",
+    });
+    customWorker.onmessage = (e) => {
+      if (!customResolve) return;
+      const r = customResolve;
+      customResolve = null;
+      r(e.data);
     };
-
-    const queryAPI = createCancellableQueryAPI();
-
-    if (!running.value) {
-      throw new Error("查询已取消");
+    customWorker.onerror = (err) => {
+      if (!customResolve) return;
+      const r = customResolve;
+      customResolve = null;
+      r({ t: "error", d: String(err.message || err), stack: "" });
+    };
+    if (sharedData) {
+      customWorker.postMessage({
+        t: "data",
+        d: {
+          trains: sharedData.rdat.t,
+          scdat: sharedData.scdat,
+          rts: sharedData.rts,
+        },
+      });
     }
-
-    const AsyncFunction = Object.getPrototypeOf(
-      async function () { }
-    ).constructor;
-    const func = new AsyncFunction(
-      "trains",
-      "stations",
-      "schedules",
-      "qry",
-      "JSON",
-      customCode.value
-    );
-    const result = await func(
-      queryAPI.trains,
-      queryAPI.stations,
-      queryAPI.schedules,
-      queryAPI.qry,
-      JSON
-    );
-
-    if (!running.value) {
-      throw new Error("查询已取消");
-    }
-
-    customResult.value = result;
-    statusMessage.value = "";
-  } catch (error) {
-    if (error.message === "查询已取消") {
-      statusMessage.value = "查询已停止";
-      customResult.value = null;
-    } else {
-      customResult.value = { error: error.message, stack: error.stack };
-    }
-  } finally {
-    running.value = false;
   }
+
+  const reply = await new Promise((resolve) => {
+    customResolve = resolve;
+    customWorker.postMessage({ t: "run", code: customCode.value });
+  });
+
+  if (reply === null) {
+    customResult.value = null;
+  } else if (reply.t === "error") {
+    customResult.value = { error: reply.d, stack: reply.stack || "" };
+  } else {
+    customResult.value = reply.d;
+  }
+  customRunning = false;
+  running.value = false;
 };
 
-import { load, keys, name } from "./templates.js";
+import { load, keys, name, prompt as llmPrompt } from "./templates.js";
 import { Chart, registerables } from "chart.js";
 Chart.register(...registerables);
 
@@ -1753,8 +1599,16 @@ refreshTemplates();
 
 const copyCustomResult = () => {
   if (customResult.value) {
-    navigator.clipboard.writeText(JSON.stringify(customResult.value, null, 2));
+    navigator.clipboard.writeText(
+      typeof customResult.value === "string"
+        ? customResult.value
+        : JSON.stringify(customResult.value, null, 2)
+    );
   }
+};
+
+const copyPrompt = () => {
+  navigator.clipboard.writeText(llmPrompt);
 };
 
 const isChartResult = (result) => {
@@ -1786,15 +1640,28 @@ watch(
 let observer = null;
 onMounted(async () => {
   try {
-    const [ndtRes, verRes] = await Promise.all([
-      fetch("ndt.json"),
-      fetch("version"),
-    ]);
+    const [ndtRes, verRes, rdatRes, scdatRes, slRes, rtsRes] =
+      await Promise.all([
+        fetch("ndt.json"),
+        fetch("version"),
+        fetch("rdat.json"),
+        fetch("scdat.json"),
+        fetch("sl.json"),
+        fetch("rts.json"),
+      ]);
     nonDailyTrains = await ndtRes.json();
     const v = (await verRes.text()).trim();
     if (v.length === 8) version.value = v;
+    const [rdat, scdat, sl, rts] = await Promise.all([
+      rdatRes.json(),
+      scdatRes.json(),
+      slRes.json(),
+      rtsRes.json(),
+    ]);
+    sharedData = { rdat, scdat, sl, rts };
   } catch (e) {
     console.error(e);
+    setStatus("错误: 数据加载失败", "error");
   }
   initWorker();
   observer = new IntersectionObserver(
@@ -1822,6 +1689,7 @@ watch(scrollObserver, (newEl, oldEl) => {
 onBeforeUnmount(() => {
   if (w) w.terminate();
   if (observer) observer.disconnect();
+  if (trainTypeObserver) trainTypeObserver.disconnect();
   if (bufferUpdateInterval) clearInterval(bufferUpdateInterval);
   gtsPromiseMap.forEach(({ reject }) => reject(new Error("组件已卸载")));
   gtsPromiseMap.clear();
@@ -1842,7 +1710,7 @@ watch([mode, mtt, escOrigin, escDestination], () => {
     customResult.value = null;
   }
 
-  statusMessage.value = "查询条件更改，重新查询";
+  setStatus("查询条件更改，重新查询");
 });
 
 watch(

@@ -92,6 +92,14 @@ textarea,
     text-align: center;
 }
 
+.train-type-group .n-button {
+    height: var(--th, 28px);
+    min-width: var(--th, 28px);
+    line-height: var(--th, 28px);
+    font-size: calc(var(--th, 28px) * 0.5);
+    padding: 0;
+}
+
 .full-width-responsive-group .short-text {
     display: none;
 }
